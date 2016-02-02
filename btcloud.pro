@@ -4,7 +4,7 @@ SOURCES +=	source/main.cpp \
 			source/SwapFile.cpp \
 			source/File.cpp \
 			source/NotifyDirectory.cpp \
-			source/Bluetec400App.cpp
+    source/BTCloudApp.cpp
 
 HEADERS +=	\
 			include/IFile.h \
@@ -14,7 +14,7 @@ HEADERS +=	\
 			include/SwapFile.h \
 			include/File.h \
 			include/NotifyDirectory.h \
-			include/Bluetec400App.hpp
+    include/BTCloudApp.hpp
 
 OTHER_FILES += resources/app.config \
 

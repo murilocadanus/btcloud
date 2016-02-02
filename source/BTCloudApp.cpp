@@ -1,4 +1,4 @@
-#include "Bluetec400App.hpp"
+#include "BTCloudApp.hpp"
 #include "Configuration.hpp"
 #include <algorithm>
 
@@ -6,11 +6,11 @@
 
 #define PATH "/home/murilo/Documents/bluetec/data"
 
-Bluetec400App::Bluetec400App()
+BTCloudApp::BTCloudApp()
 {
 }
 
-Bluetec400App::~Bluetec400App()
+BTCloudApp::~BTCloudApp()
 {
 }
 
@@ -73,7 +73,7 @@ void ProcessCall(string path)
 	}
 }
 
-bool Bluetec400App::Initialize()
+bool BTCloudApp::Initialize()
 {
 	Info(REVGEO_TAG "%s - Initializing...", pConfiguration->GetTitle().c_str());
 
@@ -88,7 +88,7 @@ bool Bluetec400App::Initialize()
 	return true;
 }
 
-bool Bluetec400App::Shutdown()
+bool BTCloudApp::Shutdown()
 {
 	Info(REVGEO_TAG "%s - Shutting down...", pConfiguration->GetTitle().c_str());
 	return true;

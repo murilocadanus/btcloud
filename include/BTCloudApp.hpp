@@ -1,5 +1,5 @@
-#ifndef BLUETEC400APP_HPP
-#define BLUETEC400APP_HPP
+#ifndef BTCLOUD_APP_HPP
+#define BTCLOUD_APP_HPP
 
 #include "Defines.hpp"
 #include <cstdlib>
@@ -11,11 +11,11 @@ using namespace Sascar;
 using namespace bluetec;
 using namespace std;
 
-class Bluetec400App : public IApp
+class BTCloudApp : public IApp
 {
 	public:
-		Bluetec400App();
-		virtual ~Bluetec400App();
+		BTCloudApp();
+		virtual ~BTCloudApp();
 
 		virtual bool Initialize();
 		bool Process() { while(1); return true; }
@@ -26,4 +26,4 @@ class Bluetec400App : public IApp
 		NotifyDirectory cNotifyDirectory;
 };
 
-#endif // BLUETEC400APP_HPP
+#endif // BTCLOUD_APP_HPP
