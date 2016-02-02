@@ -4,8 +4,12 @@
 #include "Defines.hpp"
 #include <cstdlib>
 #include <iostream>
+#include "BlueTecFileManager.h"
+#include "NotifyDirectory.h"
 
 using namespace Sascar;
+using namespace bluetec;
+using namespace std;
 
 class Bluetec400App : public IApp
 {
@@ -14,8 +18,12 @@ class Bluetec400App : public IApp
 		virtual ~Bluetec400App();
 
 		virtual bool Initialize();
-		virtual bool Process() override;
+		bool Process() { while(1); return true; }
 		virtual bool Shutdown() override;
+
+	private:
+		BlueTecFileManager cFileManager;
+		NotifyDirectory cNotifyDirectory;
 };
 
 #endif // BLUETEC400APP_HPP
