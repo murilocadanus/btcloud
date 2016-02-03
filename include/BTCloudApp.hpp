@@ -4,8 +4,8 @@
 #include "Defines.hpp"
 #include <cstdlib>
 #include <iostream>
+#include <EventFileSystem.hpp>
 #include "BlueTecFileManager.h"
-#include "NotifyDirectory.h"
 
 using namespace Sascar;
 using namespace bluetec;
@@ -23,7 +23,7 @@ class BTCloudApp : public IApp
 
 	private:
 		BlueTecFileManager cFileManager;
-		NotifyDirectory cNotifyDirectory;
+		EventFileSystem cEventFileSystem;
 };
 
 #endif // BTCLOUD_APP_HPP
