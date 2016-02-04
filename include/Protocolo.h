@@ -7,10 +7,40 @@
 #include <netinet/in.h>
 #include <list>
 #include <string>
+#include "entities/pacote_posicao.pb.h"
+
+using namespace std;
 
 namespace Sascar {
 
-using namespace std;
+struct cache_cadastro {
+	uint64_t esn;
+	uint64_t id;
+	uint64_t antena_int;
+	std::string antena_text;
+	uint64_t antena_tipo;
+	uint32_t projeto;
+	uint32_t clioid;
+	uint32_t ger1;
+	uint32_t ger2;
+	uint32_t ger3;
+	uint32_t connumero;
+	uint32_t veioid;
+	uint32_t tipo_contrato;
+	uint32_t classe ;
+	uint32_t serial0;
+	uint32_t serial1;
+	uint32_t is_sasgc;
+	uint32_t tipo_veiculo;
+	uint32_t debug;
+	std::string placa;
+	std::string entradas;
+	std::string saidas;
+	std::vector<int32_t> sensores;
+	std::vector<int32_t> atuadores;
+	uint32_t rpm_maximo;
+	std::string clincid;
+};
 
 enum pacote_recebido {
 	PACOTE_INVALIDO,
@@ -88,6 +118,7 @@ class protocolo {
 		static void setup();
 		static int tamanho_pacote(char *buffer, int len);
 
+		static int preenche_cadastro(pacote_posicao::equip_contrato *contrato, std::string chave, cache_cadastro &retorno);
 		static void processa_pacote(char *buffer, int len);
 };
 

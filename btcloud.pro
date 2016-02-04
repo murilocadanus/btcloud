@@ -4,7 +4,8 @@ SOURCES +=	source/main.cpp \
 			source/SwapFile.cpp \
 			source/File.cpp \
 			source/Protocolo.cpp \
-			source/BTCloudApp.cpp
+			source/BTCloudApp.cpp \
+			source/entities/pacote_posicao.pb.cc
 
 HEADERS +=	\
 			include/IFile.h \
@@ -14,7 +15,8 @@ HEADERS +=	\
 			include/SwapFile.h \
 			include/File.h \
 			include/Protocolo.h \
-			include/BTCloudApp.hpp
+			include/BTCloudApp.hpp \
+			include/entities/pacote_posicao.pb.h
 
 OTHER_FILES += resources/app.config \
 
