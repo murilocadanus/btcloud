@@ -1,5 +1,6 @@
 
 #include "Protocolo.h"
+#include "entities/bluetec400.pb.h"
 #include <time.h>
 #include <vector> 
 #include <string>
@@ -9,18 +10,24 @@
 #include <stdio.h>
 #include <algorithm>
 #include "BlueTecFileManager.h"
+#include "clock.h"
+
 #define PROJETO 68
 
 namespace Sascar
 {
 
 std::string serializado;
+pacote_posicao::equip_flags *eventoflag;
+pacote_posicao::equip_posicao *posicao;
 static bluetec::BlueTecFileManager fileManager;
 static int lapsoSize = sizeof(long int) + sizeof(double) * 6 + sizeof(int) * 13 + 16;
 pacote_posicao::pacote_enriquecido *pacote;
+pacote_posicao::bluetec400 bluetecPacote;
 cache_cadastro cad;
+pacote_posicao::t32_odo_vel *odo_vel_gps;
 
-typedef struct
+typedef struct saidas
 {
 		unsigned int saida0 :1;
 		unsigned int saida1 :1;
@@ -57,7 +64,7 @@ typedef struct sLapso
 		int idTrecho;
 		std::string operacao;
 		std::string ibtMotorista;
-};
+} sLapso;
 
 void lapsoToTelemetria(struct sLapso& lapso)
 {
@@ -218,8 +225,7 @@ string parseBCDString(unsigned char byte)
 	return to_string( byte / 16 * 10 ) + to_string( byte % 16 );
 }
 
-tm*
-parseDataHora(string data)
+tm* parseDataHora(string data)
 {
 
 	struct tm *dataHora;
@@ -265,7 +271,6 @@ double parseOdometro(string odometro)
 
 double parseHorimetro(string horimetro)
 {
-
 	/*cout << hex << setw(2) << setfill('0') << int((unsigned char)horimetro.at(0));
 		cout << hex << setw(2) << setfill('0') << int((unsigned char)horimetro.at(horimetro.length()-1));
 		cout <<  horimetro.length() << endl;*/
@@ -278,18 +283,18 @@ double parseLatLong(string operacao)
 
 	O CALCULO DE LATLONG É FEITO COMO NO EXEMPLO:
 	
-	  Se tivermos uma sequencia de operação 227477 por exemplo, cada byte deve ser covertido para
+	Se tivermos uma sequencia de operação 227477 por exemplo, cada byte deve ser covertido para
 	decimal separadamento e então multiplicado pelo sua grandeza em dezena. Por exemplo, 22 para
 	deciaml é 34, vezes 65536 (equivalente a 10000 em hexa) é igual a 2228224, somado a 74
 	convertido para decimal 116 * 256 (equivalente a 100) = 29696, somado a 77 em decimal 119.
-	  Dessa soma então devem ser retirados grau, minuto e segundo da seguinte maneira:
-	  A soma do exemplo é a seguinte 2228224 + 29696 + 119 = 2258039. Então:
+	Dessa soma então devem ser retirados grau, minuto e segundo da seguinte maneira:
+	A soma do exemplo é a seguinte 2228224 + 29696 + 119 = 2258039. Então:
 		2258039/100000 = 22 graus
 		2258039 - 2200000 = 58039
 		58039/1000 = 58 minutos
 		58039 - 58000 = 039
 		039 /10 = 3.9 segundos
-	 Obtidos grau, minuto e segundo, então a  conversão para o formato decimal de localização é feita:
+	Obtidos grau, minuto e segundo, então a  conversão para o formato decimal de localização é feita:
 		posicionamento = grau + (minuto/60) + (segundo/3600)
 		
 	*/
@@ -585,6 +590,13 @@ void parseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim){
 
 }
 
+void transmitir_dados_serializados(std::string data)
+{
+	cout << "------------JSON Begin" << endl;
+	cout << data << endl;
+	cout << "------------JSON END" << endl;
+}
+
 void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 {
 	fileManager.setPath("/home/murilo/Documents/bluetec/data/");
@@ -650,23 +662,22 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 		ponteiroIni = header.beginPointer;
 		lapso.timestamp = header.timestamp;
 		switch (header.dataType){
-		case bluetec::enumDataType::HSYNS_DADOS:
-		case bluetec::enumDataType::HSYNS:
-			//nesse caso o trecho ja foi iniciado então o primeiro lapso deve ser restaurado
-			lapsoSetup( tBuffer, lapso );
-			tipoDado = bluetec::enumDataType::HSYNS_DADOS;
-			//apago o lapso tempórário...
-			fileManager.delFile( getVeioid(), header.headerFile );
+			case bluetec::enumDataType::HSYNS_DADOS:
+			case bluetec::enumDataType::HSYNS:
+				//nesse caso o trecho ja foi iniciado então o primeiro lapso deve ser restaurado
+				lapsoSetup( tBuffer, lapso );
+				tipoDado = bluetec::enumDataType::HSYNS_DADOS;
+				//apago o lapso tempórário...
+				fileManager.delFile( getVeioid(), header.headerFile );
 			break;
-		case bluetec::enumDataType::DADOS:
-			//nesse caso o pedaço de dados encontrado não significa nada então será apenas atualizado...
-			dados = string(tBuffer) + dados;
-			// ...deleto esse arquivo temporario para sobrescreve-lo...
-			fileManager.delFile( getVeioid(), header.headerFile );
-			tipoDado = bluetec::enumDataType::DADOS;
+			case bluetec::enumDataType::DADOS:
+				//nesse caso o pedaço de dados encontrado não significa nada então será apenas atualizado...
+				dados = string(tBuffer) + dados;
+				// ...deleto esse arquivo temporario para sobrescreve-lo...
+				fileManager.delFile( getVeioid(), header.headerFile );
+				tipoDado = bluetec::enumDataType::DADOS;
 			break;
 		}
-
 	}
 	cout << "DEBUG -- PROCURANDO ALGO DEPOIS DESSE ARQUIVO..."<< endl;
 	// se existe algo que encaixe no final...
@@ -861,24 +872,34 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 								printf( " lat long -> %20.18f %20.18f \n ", lat, lon );
 
 								// Setando dados do pacote de posicao
+								posicao = pacote->mutable_ep();
+								posicao->set_lat2( lat );
+								posicao->set_long2( lon );
+								posicao->set_datahora( lapso.timestamp );
 								//	posicao->set_datachegada(lapso.timestamp);
+								posicao->set_datachegada(clock::horaatual);
 								//	printf(" Dada Chegada -> %s\n", clock::horaatual);
 
+								eventoflag = posicao->mutable_eventoflag();
 								if( lapso.rpm > 0 && lapso.velocidade > 0 )
 								{
-									// TODO
+									eventoflag->set_ignicao( 1 );
 								}
 								else
 								{
-									// TODO
+									eventoflag->set_ignicao( 0 );
 								}
 
-								//odo_vel_gps->set_velocidade( lapso.velocidade );
+								odo_vel_gps = posicao->mutable_odo_vel_gps();
+								odo_vel_gps->set_velocidade( lapso.velocidade );
 								printf( " timestamp antes de transmitir... %d \n ", lapso.timestamp );
 
 								cout << " posicionamento encontrado, enviando pacote com " << dec << sizePacote / lapsoSize << " lapsos de " << dec << lapsoSize << " bytes" << endl;
 
 								//Envia para a fila o pacote de posição já em sem formato final protobuf.
+								bluetecPacote.SerializeToString(&serializado);
+								transmitir_dados_serializados(serializado);
+								bluetecPacote.Clear();
 								//bluetecPacote.clear_tb();
 								//reinicia o tamanho máximo do pacote pois já enviou
 								sizePacote = 0;
@@ -918,9 +939,9 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 					{
 						cout << " tamanho maximo atingido, enviando pacote com " << dec << sizePacote / lapsoSize << " lapsos de " << dec << lapsoSize << " bytes" << endl;
 						//se estourar já envia antes
-						//bluetecPacote.SerializeToString( &serializado );
-						//parser::parser::transmitir_dados_serializados( serializado );
-						//bluetecPacote.clear_tb();
+						bluetecPacote.SerializeToString( &serializado );
+						transmitir_dados_serializados( serializado );
+						bluetecPacote.clear_tb();
 						//reinicia o valor do tamanho do pacote com o tamanho do lapso que não foi enviado
 						sizePacote = lapsoSize;
 					}
@@ -948,9 +969,9 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 
 		} //end while
 
-		//bluetecPacote.SerializeToString( &serializado );
-		//parser::parser::transmitir_dados_serializados( serializado );
-		//bluetecPacote.clear_tb();
+		bluetecPacote.SerializeToString( &serializado );
+		transmitir_dados_serializados( serializado );
+		bluetecPacote.clear_tb();
 
 		//se não tiver  fim de trecho, precisa retornar o último lapso para
 		//persisti-lo e não haver reprocessamento
@@ -1039,7 +1060,9 @@ void protocolo::processa_pacote(char *buffer, int len)
 	unsigned char bt4[6500];
 	std::string sbt4;
 
-	contrato = new pacote_posicao::equip_contrato();
+	bluetecPacote.Clear();
+	pacote = bluetecPacote.mutable_pe();
+	contrato = pacote->mutable_ec();
 
 	/* buffer contem o path do arquivo recebido.
 		 *
