@@ -12,6 +12,7 @@
 #include "BlueTecFileManager.h"
 #include "clock.h"
 #include "mongo/client/dbclient.h" // for the driver
+#include "Configuration.hpp"
 
 #define PROJETO 68
 
@@ -23,10 +24,12 @@ pacote_posicao::equip_flags *eventoflag;
 pacote_posicao::equip_posicao *posicao;
 static bluetec::BlueTecFileManager fileManager;
 static int lapsoSize = sizeof(long int) + sizeof(double) * 6 + sizeof(int) * 13 + 16;
+pacote_posicao::t_telemetria_bluetec400 *telemetria;
 pacote_posicao::pacote_enriquecido *pacote;
 pacote_posicao::bluetec400 bluetecPacote;
 cache_cadastro cad;
 pacote_posicao::t32_odo_vel *odo_vel_gps;
+static mongo::DBClientConnection *pDBClientConnection;
 
 typedef struct saidas
 {
@@ -67,31 +70,29 @@ typedef struct sLapso
 		std::string ibtMotorista;
 } sLapso;
 
-void lapsoToTelemetria(struct sLapso& lapso)
+void lapsoToTelemetria(pacote_posicao::t_telemetria_bluetec400 *tele, struct sLapso& lapso)
 {
-	/*
-		tele->set_trecho( lapso.idTrecho );
-		tele->set_datahora( lapso.timestamp );
-		tele->set_velocidade( lapso.velocidade );
-		tele->set_rpm( lapso.rpm );
-		tele->set_odometro( lapso.odometro );
-		tele->set_horimetro( lapso.horimetro );
-		tele->set_ed1( lapso.ed1 );
-		tele->set_ed2( lapso.ed2 );
-		tele->set_ed3( lapso.ed3 );
-		tele->set_ed4( lapso.ed4 );
-		tele->set_ed5( lapso.ed5 );
-		tele->set_ed6( lapso.ed6 );
-		tele->set_ed7( lapso.ed7 );
-		tele->set_ed8( lapso.ed8 );
-		tele->set_acelx( lapso.acelx );
-		tele->set_acely( lapso.acely );
-		tele->set_an1( lapso.an1 );
-		tele->set_an2( lapso.an2 );
-		tele->set_an3( lapso.an3 );
-		tele->set_an4( lapso.an4 );
-		tele->set_operacao( lapso.operacao );
-		*/
+	tele->set_trecho( lapso.idTrecho );
+	tele->set_datahora( lapso.timestamp );
+	tele->set_velocidade( lapso.velocidade );
+	tele->set_rpm( lapso.rpm );
+	tele->set_odometro( lapso.odometro );
+	tele->set_horimetro( lapso.horimetro );
+	tele->set_ed1( lapso.ed1 );
+	tele->set_ed2( lapso.ed2 );
+	tele->set_ed3( lapso.ed3 );
+	tele->set_ed4( lapso.ed4 );
+	tele->set_ed5( lapso.ed5 );
+	tele->set_ed6( lapso.ed6 );
+	tele->set_ed7( lapso.ed7 );
+	tele->set_ed8( lapso.ed8 );
+	tele->set_acelx( lapso.acelx );
+	tele->set_acely( lapso.acely );
+	tele->set_an1( lapso.an1 );
+	tele->set_an2( lapso.an2 );
+	tele->set_an3( lapso.an3 );
+	tele->set_an4( lapso.an4 );
+	tele->set_operacao( lapso.operacao );
 }
 
 void lapsoSetup(string lapso, struct sLapso& setup)
@@ -669,12 +670,15 @@ void transmitir_dados_serializados(pacote_posicao::bluetec400 data)
 	}
 	*/
 
-	int idEquipment = 0;
-	int vehicle = 0;
-	std::string plate = "OXC-8739";
+	int idEquipment = data.pe().ec().id();
+	int vehicle = data.pe().ec().veioid();
+	std::string plate = "MUR0001";
 	std::string client = "BT_FROTA";
-	std::string datePosition = "2015-11-05T08:40:44.000Z";
-	std::string dateArrival = "2015-11-05T08:40:44.000Z";
+
+	u_int64_t datePosition = data.pe().ep().datahora(); // "2015-11-05T08:40:44.000Z"
+	datePosition *= 1000;
+	u_int64_t dateArrival = data.pe().ep().datachegada(); //"2015-11-05T08:40:44.000Z";
+	dateArrival *= 1000;
 	std::string address = "";
 	std::string neighborhood = "";
 	std::string city = "";
@@ -693,55 +697,84 @@ void transmitir_dados_serializados(pacote_posicao::bluetec400 data)
 	int hdop = 1;
 	int satellites = 8;
 	int directionGps = 0;
+	bool input1 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(0) : false;
+	bool input2 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(1) : false;
+	bool input3 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(2) : false;
+	bool input4 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(3) : false;
+	bool input5 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(4) : false;
+	bool input6 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(5) : false;
+	bool input7 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(6) : false;
+	bool ignition = data.pe().ep().eventoflag().ignicao();
+	bool output0 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(0) : false;
+	bool output1 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(1) : false;
+	bool output2 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(2) : false;
+	bool output3 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(3) : false;
+	bool output4 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(4) : false;
+	bool output5 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(5) : false;
+	bool output6 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(6) : false;
+	bool output7 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(7) : false;
 
 	bool memory = false;
-	std::string hodometroTrip = "7603.4";
-	std::string analogic1 = "0";
-	std::string analogic2 = "0";
-	std::string horimeter = "493.2";
-	std::string accelerometerX = "155";
-	std::string accelerometerY = "148";
-	std::string hodometer = "7603.4";
-	std::string rpm = "1350";
-	std::string analogic3 = "0";
-	std::string analogic4 = "84";
+	bool roaming = false;
+	bool network = false;
+	bool available = true;
+	bool networkService = true;
+	bool dataService = true;
+	bool pppConnected = true;
+	bool voiceCallIsActive = false;
+
+	int32_t hodometroTrip = data.tb_size() > 0 ? data.tb(0).trecho() : 0;
+	int32_t analogic1 = data.tb_size() > 0 ? data.tb(0).an1() : 0;
+	int32_t analogic2 = data.tb_size() > 0 ? data.tb(0).an2() : 0;
+	int32_t horimeter = data.tb_size() > 0 ? data.tb(0).horimetro() : 0;
+	double_t accelerometerX = data.tb_size() > 0 ? data.tb(0).acelx() : .0;
+	double_t accelerometerY = data.tb_size() > 0 ? data.tb(0).acely() : .0;
+	double_t hodometer = data.tb_size() > 0 ? data.tb(0).odometro() : .0;
+	int32_t rpm = data.tb_size() > 0 ? data.tb(0).rpm() : 0;
+	int32_t analogic3 = data.tb_size() > 0 ? data.tb(0).an3() : 0;
+	int32_t analogic4 = data.tb_size() > 0 ? data.tb(0).an4() : 0;
+	bool breaks = false;
 
 	mongo::BSONObj dataPosJSON = BSON(
 				"id_equipamento" << idEquipment << "veiculo" << vehicle << "placa" << plate << "cliente" << client <<
-				"data_posicao" << datePosition << "data_chegada" << dateArrival << "velocidade" << velocity <<
-				"endereco" << address << "bairro" << neighborhood << "municipio" << city << "estado" << province <<
-				"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(lat2 << long2)) <<
+				"data_posicao" << mongo::Date_t(datePosition) << "data_chegada" << mongo::Date_t(dateArrival) <<
+				"velocidade" << velocity <<	"endereco" << address << "bairro" << neighborhood << "municipio" << city
+				<< "estado" << province <<
+				"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2)) <<
 				"eventIndex" << eventIndex << "eventCode" << eventCode << "numero" << number << "pais" << country <<
 				"velocidade_via" << velocityStreet <<
 
 				"altitude_gps" << altitudeGps << "gps" << gps << "hdop" << hdop << "satellites" << satellites <<
 				"direcao_gps" << directionGps <<
 				"entradas" << BSON_ARRAY(
-					"entrada1" << false << "entrada2" << false << "entrada3" << false << "entrada4" << false <<
-					"entrada5" << false << "entrada6" << false << "entrada7" << false << "ignicao" << false
+					"entrada1" << input1 << "entrada2" << input2 << "entrada3" << input3 << "entrada4" << input4 <<
+					"entrada5" << input5 << "entrada6" << input6 << "entrada7" << input7 << "ignicao" << ignition
 				) <<
 				"saidas" << BSON_ARRAY(
-						"saida5" << false << "saida6" << false << "saida7" << false << "saida0" << false <<
-						"saida1" << false << "saida2" << false << "saida3" << false << "saida4" << false
+						"saida5" << output5 << "saida6" << output6 << "saida7" << output7 << "saida0" << output0 <<
+						"saida1" << output1 << "saida2" << output2 << "saida3" << output3 << "saida4" << output4
 				) <<
 
 				"memoria" << memory <<
 				"tipo_posicao" << BSON(
-					"roaming" << false << "3GNetwork" << false << "available" << true << "networkService" << true <<
-					"dataService" << true << "pppConnected" << true << "voiceCallIsActive" << false
+					"roaming" << roaming << "3GNetwork" << network << "available" << available <<
+					"networkService" << networkService << "dataService" << dataService << "pppConnected" << pppConnected <<
+					"voiceCallIsActive" << voiceCallIsActive
 				) <<
 				"bateria" << "12v" <<
 				"DadoLivre" << BSON(
 					"HodometroTrip" << hodometroTrip << "Analogico1" << analogic1 << "Analogico2" << analogic2 <<
 					"Horimetro" << horimeter << "AcelerometroX" << accelerometerX << "AcelerometroY" << accelerometerY <<
 					"Hodometro" << hodometer << "Rpm" << rpm << "Analogico3" << analogic3 << "Analogico4" << analogic4 <<
-					"Freio" << false
+					"Freio" << breaks
 				)
 				);
 
 	cout << "------------JSON Begin" << endl;
 	cout << dataPosJSON.toString().c_str() << endl;
 	cout << "------------JSON END" << endl;
+
+	pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
 }
 
 void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
@@ -1094,8 +1127,8 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 					}
 					else
 					{
-						//telemetria = bluetecPacote.add_tb();
-						lapsoToTelemetria(lapso);
+						telemetria = bluetecPacote.add_tb();
+						lapsoToTelemetria(telemetria, lapso);
 					}
 
 					//cout << " INCREMENTO DE TIMESTAMP " << dec << lapso.timestamp << " += "<< dec << hfull.lapso << " = ";
@@ -1200,8 +1233,11 @@ int protocolo::preenche_cadastro(pacote_posicao::equip_contrato *contrato, std::
 	return 0;
 }
 
-void protocolo::processa_pacote(char *buffer, int len)
+void protocolo::processa_pacote(char *buffer, int len, mongo::DBClientConnection *dbClient)
 {
+	if(!pDBClientConnection)
+		pDBClientConnection = dbClient;
+
 	pacote_posicao::equip_contrato *contrato;
 	FILE *in = 0;
 	unsigned char bt4[6500];
@@ -1293,11 +1329,11 @@ void protocolo::processa_pacote(char *buffer, int len)
 		for(size_t i = 1200; i < sbt4.length(); i += 1200 )
 		{
 
-			sbt4.erase( i, 13 ); // apagaa os 13 bytes (5 de inicio e 8 de fim) de uma transicao de um subpacote para outro
+			sbt4.erase(i, 13); // apagaa os 13 bytes (5 de inicio e 8 de fim) de uma transicao de um subpacote para outro
 			lSize -= 13;
 		}
 
-		puts( "DEBUG -- INICIANDO LAPSOS" );
+		puts("DEBUG -- INICIANDO LAPSOS");
 		//int tipo_dado = bluetec::enumDataType::DADOS;
 		size_t inicio = 0;
 
@@ -1308,10 +1344,10 @@ void protocolo::processa_pacote(char *buffer, int len)
 		size_t lHfull = 250;
 
 		string fimTrecho;
-		fimTrecho.push_back( (unsigned char ) 0x82 );
-		fimTrecho.push_back( (unsigned char ) 0xA3 );
-		fimTrecho.push_back( (unsigned char ) 0xA5 );
-		fimTrecho.push_back( (unsigned char ) 0xA7 );
+		fimTrecho.push_back((unsigned char ) 0x82);
+		fimTrecho.push_back((unsigned char ) 0xA3);
+		fimTrecho.push_back((unsigned char ) 0xA5);
+		fimTrecho.push_back((unsigned char ) 0xA7);
 
 		cout << "DEBUG -- BUSCANSO CABECALHOS... " << endl;
 		for(size_t i = 0; i < sbt4.length(); i++)
@@ -1477,4 +1513,3 @@ int protocolo::projeto2protocolo(uint32_t projeto)
 
 }
 }
-;

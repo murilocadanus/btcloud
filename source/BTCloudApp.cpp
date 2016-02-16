@@ -16,17 +16,33 @@
 
 using namespace std;
 
+DBClientConnection BTCloudApp::cDBConnection;
+
 BTCloudApp::BTCloudApp()
 {
+	// Init mongo client
+	mongo::client::initialize();
 }
 
 BTCloudApp::~BTCloudApp()
 {
+	// Release mongodb connection
+	mongo::client::shutdown(0);
 }
 
 void ProcessPackage(string path)
 {
-	protocolo::processa_pacote((char*)path.c_str(), path.length());
+	// Connect to mongo client
+	BTCloudApp::cDBConnection.connect(pConfiguration->GetMongoDBHost());
+	Info(REVGEO_TAG "%s - Connected to mongodb", pConfiguration->GetTitle().c_str());
+
+	// Process
+	protocolo::processa_pacote((char*)path.c_str(), path.length(), &BTCloudApp::cDBConnection);
+
+	// Disconnect from mongodb
+	BSONObj info;
+	BTCloudApp::cDBConnection.logout(pConfiguration->GetMongoDBHost(), info);
+	Info(REVGEO_TAG "%s - Disconnected from mongodb", pConfiguration->GetTitle().c_str());
 }
 
 bool BTCloudApp::Initialize()

@@ -8,6 +8,7 @@
 #include <list>
 #include <string>
 #include "entities/pacote_posicao.pb.h"
+#include "mongo/client/dbclient.h" // for the driver
 
 using namespace std;
 
@@ -119,7 +120,7 @@ class protocolo {
 		static int tamanho_pacote(char *buffer, int len);
 
 		static int preenche_cadastro(pacote_posicao::equip_contrato *contrato, std::string chave, cache_cadastro &retorno);
-		static void processa_pacote(char *buffer, int len);
+		static void processa_pacote(char *buffer, int len, mongo::DBClientConnection *dbClient);
 		static void transmitir_dados_serializados(std::string data);
 };
 
