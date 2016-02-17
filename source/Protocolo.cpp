@@ -606,8 +606,6 @@ void transmitir_dados_serializados(pacote_posicao::bluetec400 data)
 		"bairro" : "",
 		"municipio" : "",
 		"estado" : "",
-		"eventIndex" : 35,
-		"eventCode" : 31,
 		"numero" : "",
 		"pais" : "",
 		"velocidade_via" : "",
@@ -618,53 +616,22 @@ void transmitir_dados_serializados(pacote_posicao::bluetec400 data)
 				-60.7441666666667
 			]
 		},
-		"altitude_gps" : "",
 		"gps" : true,
-		"hdop" : 1,
-		"satellites" : 8,
-		"direcao_gps" : 0,
-		"entradas" : {
-			"entrada1" : false,
-			"entrada2" : false,
-			"entrada3" : false,
-			"entrada4" : false,
-			"entrada5" : false,
-			"entrada6" : false,
-			"entrada7" : false,
-			"ignicao" : false
-		},
-		"saidas" : {
-			"saida5" : false,
-			"saida6" : false,
-			"saida7" : false,
-			"saida0" : false,
-			"saida1" : false,
-			"saida2" : false,
-			"saida3" : false,
-			"saida4" : false
-		},
-		"memoria" : false,
-		"tipo_posicao" : {
-			"roaming" : false,
-			"3GNetwork" : false,
-			"available" : true,
-			"networkService" : true,
-			"dataService" : true,
-			"pppConnected" : true,
-			"voiceCallIsActive" : false
-		},
-		"bateria" : "12v",
 		"DadoLivre" : {
-			"HodometroTrip" : "7603.4",
 			"Analogico1" : "0",
 			"Analogico2" : "0",
+			"Analogico3" : "0",
+			"Analogico4" : "84",
+			"Digital1" : "0",
+			"Digital2" : "0",
+			"Digital3" : "0",
+			"Digital4" : "84",
 			"Horimetro" : "493.2",
 			"AcelerometroX" : "155",
 			"AcelerometroY" : "148",
 			"Hodometro" : "7603.4",
 			"Rpm" : "1350",
-			"Analogico3" : "0",
-			"Analogico4" : "84",
+			"Ignicao" : false
 			"Freio" : false
 		}
 	}
@@ -683,57 +650,29 @@ void transmitir_dados_serializados(pacote_posicao::bluetec400 data)
 	std::string neighborhood = "";
 	std::string city = "";
 	std::string province = "";
-	int velocity = 0;
+	int velocity = data.tb(0).velocidade();
 	double lat2 = data.pe().ep().lat2();
 	double long2 = data.pe().ep().long2();
-	int eventIndex = 35;
-	int eventCode = 31;
 	std::string number = "";
 	std::string country = "";
 	std::string velocityStreet = "";
-
-	std::string altitudeGps = "";
 	bool gps = true;
-	int hdop = 1;
-	int satellites = 8;
-	int directionGps = 0;
-	bool input1 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(0) : false;
-	bool input2 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(1) : false;
-	bool input3 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(2) : false;
-	bool input4 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(3) : false;
-	bool input5 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(4) : false;
-	bool input6 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(5) : false;
-	bool input7 = data.pe().ep().has_entrada_gps_info() ? data.pe().ep().entrada(6) : false;
-	bool ignition = data.pe().ep().eventoflag().ignicao();
-	bool output0 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(0) : false;
-	bool output1 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(1) : false;
-	bool output2 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(2) : false;
-	bool output3 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(3) : false;
-	bool output4 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(4) : false;
-	bool output5 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(5) : false;
-	bool output6 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(6) : false;
-	bool output7 = data.pe().ep().has_saida_cfg() ? data.pe().ep().saida(7) : false;
 
-	bool memory = false;
-	bool roaming = false;
-	bool network = false;
-	bool available = true;
-	bool networkService = true;
-	bool dataService = true;
-	bool pppConnected = true;
-	bool voiceCallIsActive = false;
-
-	int32_t hodometroTrip = data.tb_size() > 0 ? data.tb(0).trecho() : 0;
 	int32_t analogic1 = data.tb_size() > 0 ? data.tb(0).an1() : 0;
 	int32_t analogic2 = data.tb_size() > 0 ? data.tb(0).an2() : 0;
+	int32_t analogic3 = data.tb_size() > 0 ? data.tb(0).an3() : 0;
+	int32_t analogic4 = data.tb_size() > 0 ? data.tb(0).an4() : 0;
+	bool digital1 = data.tb(0).ed7();
+	bool digital2 = data.tb(0).ed6();
+	bool digital3 = data.tb(0).ed5();
+	bool digital4 = data.tb(0).ed4();
 	int32_t horimeter = data.tb_size() > 0 ? data.tb(0).horimetro() : 0;
 	double_t accelerometerX = data.tb_size() > 0 ? data.tb(0).acelx() : .0;
 	double_t accelerometerY = data.tb_size() > 0 ? data.tb(0).acely() : .0;
 	double_t hodometer = data.tb_size() > 0 ? data.tb(0).odometro() : .0;
 	int32_t rpm = data.tb_size() > 0 ? data.tb(0).rpm() : 0;
-	int32_t analogic3 = data.tb_size() > 0 ? data.tb(0).an3() : 0;
-	int32_t analogic4 = data.tb_size() > 0 ? data.tb(0).an4() : 0;
-	bool breaks = false;
+	bool ignition = data.pe().ep().eventoflag().ignicao();
+	bool breaks = data.tb(0).ed8();
 
 	mongo::BSONObj dataPosJSON = BSON(
 				"id_equipamento" << idEquipment << "veiculo" << vehicle << "placa" << plate << "cliente" << client <<
@@ -741,32 +680,13 @@ void transmitir_dados_serializados(pacote_posicao::bluetec400 data)
 				"velocidade" << velocity <<	"endereco" << address << "bairro" << neighborhood << "municipio" << city
 				<< "estado" << province <<
 				"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2)) <<
-				"eventIndex" << eventIndex << "eventCode" << eventCode << "numero" << number << "pais" << country <<
-				"velocidade_via" << velocityStreet <<
-
-				"altitude_gps" << altitudeGps << "gps" << gps << "hdop" << hdop << "satellites" << satellites <<
-				"direcao_gps" << directionGps <<
-				"entradas" << BSON_ARRAY(
-					"entrada1" << input1 << "entrada2" << input2 << "entrada3" << input3 << "entrada4" << input4 <<
-					"entrada5" << input5 << "entrada6" << input6 << "entrada7" << input7 << "ignicao" << ignition
-				) <<
-				"saidas" << BSON_ARRAY(
-						"saida5" << output5 << "saida6" << output6 << "saida7" << output7 << "saida0" << output0 <<
-						"saida1" << output1 << "saida2" << output2 << "saida3" << output3 << "saida4" << output4
-				) <<
-
-				"memoria" << memory <<
-				"tipo_posicao" << BSON(
-					"roaming" << roaming << "3GNetwork" << network << "available" << available <<
-					"networkService" << networkService << "dataService" << dataService << "pppConnected" << pppConnected <<
-					"voiceCallIsActive" << voiceCallIsActive
-				) <<
-				"bateria" << "12v" <<
+				"numero" << number << "pais" << country << "velocidade_via" << velocityStreet << "gps" << gps <<
 				"DadoLivre" << BSON(
-					"HodometroTrip" << hodometroTrip << "Analogico1" << analogic1 << "Analogico2" << analogic2 <<
-					"Horimetro" << horimeter << "AcelerometroX" << accelerometerX << "AcelerometroY" << accelerometerY <<
-					"Hodometro" << hodometer << "Rpm" << rpm << "Analogico3" << analogic3 << "Analogico4" << analogic4 <<
-					"Freio" << breaks
+					"Analogico1" << analogic1 << "Analogico2" << analogic2 << "Analogico3" << analogic3 <<
+					"Analogico4" << analogic4 << "Horimetro" << horimeter << "AcelerometroX" << accelerometerX <<
+					"Digital1" << digital1 << "Digital2" << digital2 << "Digital3" << digital3 <<
+					"Digital4" << digital4 << "AcelerometroY" << accelerometerY << "Hodometro" << hodometer <<
+					"Ignicao" << ignition << "Rpm" << rpm << "Freio" << breaks
 				)
 				);
 
@@ -985,14 +905,14 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 						bufferED[0] = dados.at( index );
 						ed = (saidas* ) bufferED;
 
-						lapso.ed1 = (unsigned int ) ed->saida7;
-						lapso.ed2 = (unsigned int ) ed->saida6;
-						lapso.ed3 = (unsigned int ) ed->saida5;
-						lapso.ed4 = (unsigned int ) ed->saida4;
-						lapso.ed5 = (unsigned int ) ed->saida3;
-						lapso.ed6 = (unsigned int ) ed->saida2;
-						lapso.ed7 = (unsigned int ) ed->saida1;
-						lapso.ed8 = (unsigned int ) ed->saida0;
+						lapso.ed1 = (unsigned int ) ed->saida0;
+						lapso.ed2 = (unsigned int ) ed->saida1;
+						lapso.ed3 = (unsigned int ) ed->saida2;
+						lapso.ed4 = (unsigned int ) ed->saida3;
+						lapso.ed5 = (unsigned int ) ed->saida4;
+						lapso.ed6 = (unsigned int ) ed->saida5;
+						lapso.ed7 = (unsigned int ) ed->saida6;
+						lapso.ed8 = (unsigned int ) ed->saida7;
 						//cout << ((unsigned int)hsyns.at(index)) << endl;
 					}
 					//verifico se ha byte de expansao novamente, dessa vez para processa-lo

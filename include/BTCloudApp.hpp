@@ -7,6 +7,8 @@
 #include <EventFileSystem.hpp>
 #include "BlueTecFileManager.h"
 #include "mongo/client/dbclient.h" // for the driver
+#include <api/mysql/MySQLConnector.hpp>
+#include "Configuration.hpp"
 
 using namespace Sascar;
 using namespace bluetec;
@@ -20,13 +22,14 @@ class BTCloudApp : public IApp
 		virtual ~BTCloudApp();
 
 		virtual bool Initialize();
-		bool Process() { while(1); return true; }
+		virtual bool Process();
 		virtual bool Shutdown() override;
 		static DBClientConnection cDBConnection;
 
 	private:
 		BlueTecFileManager cFileManager;
 		EventFileSystem cEventFileSystem;
+		MysqlConnector cMysqlConnection;
 };
 
 #endif // BTCLOUD_APP_HPP

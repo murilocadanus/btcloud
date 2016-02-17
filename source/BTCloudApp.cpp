@@ -22,12 +22,20 @@ BTCloudApp::BTCloudApp()
 {
 	// Init mongo client
 	mongo::client::initialize();
+
+	// Init mysql client
+	/*cMysqlConnection = MysqlConnector(pConfiguration->GetMySQLHost(),
+										pConfiguration->GetMySQLUser(),
+										pConfiguration->GetMySQLPassword());*/
 }
 
 BTCloudApp::~BTCloudApp()
 {
 	// Release mongodb connection
 	mongo::client::shutdown(0);
+
+	// Release mysql connection
+	//cMysqlConnection.Disconnect();
 }
 
 void ProcessPackage(string path)
@@ -57,6 +65,11 @@ bool BTCloudApp::Initialize()
 	cEventFileSystem.start();
 
 	return true;
+}
+
+bool BTCloudApp::Process()
+{
+	while(1); return true;
 }
 
 bool BTCloudApp::Shutdown()
