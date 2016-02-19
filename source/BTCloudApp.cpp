@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <stdio.h>
 #include <algorithm>
+#include "FileSystem.hpp"
 
 #define REVGEO_TAG "[BlueTec400] "
 
@@ -57,19 +58,28 @@ bool BTCloudApp::Initialize()
 {
 	Info(REVGEO_TAG "%s - Initializing...", pConfiguration->GetTitle().c_str());
 
+	pFileSystem->AddFileSystemListener(this);
+/*
 	cEventFileSystem.setListenerParam(EventFileSystem::RECURSIVE_PATH);
 	cEventFileSystem.setPath(pConfiguration->GetAppListeningPath());
 	cFileManager.setPath(PATH);
 
 	cEventFileSystem.setListnerEventFileSystem(ProcessPackage);
 	cEventFileSystem.start();
-
+*/
 	return true;
 }
 
-bool BTCloudApp::Process()
+bool BTCloudApp::Update(float dt)
 {
-	while(1); return true;
+	//Log("Update: %d", dt);
+	(void) dt;
+}
+
+void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
+{
+	(void) ev;
+	Log(REVGEO_TAG "%s - File system change %s", pConfiguration->GetTitle().c_str());
 }
 
 bool BTCloudApp::Shutdown()
