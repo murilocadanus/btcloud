@@ -27,9 +27,9 @@ void SwapFile::saveBufferFile(std::string pathFile, const char *bufferFile, uint
 }
 
 /*
- * Teoricamente se o arquivo de swap existe mas o seu conteudo está zerado,
+ * Teoricamente se o arquivo de swap existe mas o seu conteudo esta zerado,
  * o arquivo de swap foi truncado por algum motivo, logo o arquivo original
- * está desatualizado.
+ * esta desatualizado.
  */
 bool SwapFile::getBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeBufferFile)
 {
@@ -45,7 +45,7 @@ bool SwapFile::getBufferFile(std::string pathFile, char *bufferFile, uint32_t& s
 	}
 	else
 	{
-		/* se não achou o swap entao abre o original... */
+		/* se nao achou o swap entao abre o original... */
 		retorno = File::getBufferFile(pathFile, bufferFile, sizeBufferFile);
 	}
 

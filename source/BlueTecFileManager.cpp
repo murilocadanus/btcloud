@@ -245,12 +245,12 @@ uint32_t BlueTecFileManager::getNextIdTrecho()
 
 		memcpy(buffer, &tmp, 4);
 
-		// Salva a alteração...
+		// Salva a alteracao...
 		this->files.saveBufferFile(SEQUENCE_TRECHO, buffer, 4);
 	}
 	else
 	{
-		// se o arquivo ainda nao existe então cria...
+		// se o arquivo ainda nao existe entao cria...
 		this->files.saveBufferFile(SEQUENCE_TRECHO, buffer, 4);
 	}
 

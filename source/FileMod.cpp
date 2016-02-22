@@ -20,7 +20,7 @@ FileMod::FileMod()
 
 FileMod::~FileMod()
 {
-	//this->file o responsável por criar file que o destrua...
+	//this->file o responsavel por criar file que o destrua...
 }
 
 void FileMod::setFile(IFile *file)

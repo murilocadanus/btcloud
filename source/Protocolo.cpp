@@ -1153,7 +1153,7 @@ int protocolo::preenche_cadastro(pacote_posicao::equip_contrato *contrato, std::
 	return 0;
 }
 
-void protocolo::processa_pacote(char *buffer, int len, mongo::DBClientConnection *dbClient)
+void protocolo::processa_pacote(const char *buffer, int len, mongo::DBClientConnection *dbClient)
 {
 	if(!pDBClientConnection)
 		pDBClientConnection = dbClient;

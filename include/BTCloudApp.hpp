@@ -26,13 +26,9 @@ class BTCloudApp : public IApp, public IEventFileSystemListener
 		virtual bool Initialize() override;
 		virtual bool Shutdown() override;
 
-		// IApp - IUpdatable
-		virtual bool Update(float dt) override;
-		static DBClientConnection cDBConnection;
-
 	private:
 		BlueTecFileManager cFileManager;
-		//EventFileSystem cEventFileSystem;
+		DBClientConnection cDBConnection;
 		MysqlConnector cMysqlConnection;
 
 		void OnFileSystemNotifyChange(const EventFileSystem *ev);
