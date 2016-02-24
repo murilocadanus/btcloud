@@ -3,7 +3,7 @@ SOURCES +=	source/main.cpp \
 			source/FileMod.cpp \
 			source/SwapFile.cpp \
 			source/File.cpp \
-			source/Protocolo.cpp \
+			source/Protocol.cpp \
 			source/BTCloudApp.cpp \
 			source/entities/pacote_posicao.pb.cc \
 			source/entities/bluetec400.pb.cc \
@@ -16,7 +16,7 @@ HEADERS +=	\
 			include/FileMod.h \
 			include/SwapFile.h \
 			include/File.h \
-			include/Protocolo.h \
+			include/Protocol.hpp \
 			include/BTCloudApp.hpp \
 			include/entities/pacote_posicao.pb.h \
 			include/entities/bluetec400.pb.h \

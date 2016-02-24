@@ -7,7 +7,6 @@ INCLUDEPATH +=	include/ \
 				../libi9/include
 
 unix {
-	DEFINES	+= DEBUG
 	LIBS	+= -L ../libi9/lib -lI9 -pthread -lmongoclient -lcurl -lyajl -lboost_system -lboost_thread -lprotobuf -lmysqlclient
 
 	#Configs

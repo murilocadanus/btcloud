@@ -1,20 +1,25 @@
 
-#include "Protocolo.h"
-#include "entities/bluetec400.pb.h"
+#include "Protocol.hpp"
 #include <time.h>
-#include <vector> 
+#include <vector>
 #include <string>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <stdio.h>
 #include <algorithm>
+#include <util/Log.hpp>
 #include "BlueTecFileManager.h"
 #include "clock.h"
 #include "mongo/client/dbclient.h" // for the driver
 #include "Configuration.hpp"
+#include <api/mysql/MySQLConnector.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
 
-#define PROJETO 68
+#define TAG "[Protocol] "
+
+using namespace boost::algorithm;
 
 namespace Sascar
 {
@@ -29,7 +34,6 @@ pacote_posicao::pacote_enriquecido *pacote;
 pacote_posicao::bluetec400 bluetecPacote;
 cache_cadastro cad;
 pacote_posicao::t32_odo_vel *odo_vel_gps;
-static mongo::DBClientConnection *pDBClientConnection;
 
 typedef struct saidas
 {
@@ -284,7 +288,7 @@ double parseLatLong(string operacao)
 	/*
 
 	O CALCULO DE LATLONG E FEITO COMO NO EXEMPLO:
-	
+
 	Se tivermos uma sequencia de operacao 227477 por exemplo, cada byte deve ser covertido para
 	decimal separadamento e entao multiplicado pelo sua grandeza em dezena. Por exemplo, 22 para
 	deciaml e 34, vezes 65536 (equivalente a 10000 em hexa) e igual a 2228224, somado a 74
@@ -298,7 +302,7 @@ double parseLatLong(string operacao)
 		039 /10 = 3.9 segundos
 	Obtidos grau, minuto e segundo, entao a  conversao para o formato decimal de localizacao e feita:
 		posicionamento = grau + (minuto/60) + (segundo/3600)
-		
+
 	*/
 
 	double grau, minuto, segundo;
@@ -315,15 +319,15 @@ double parseLatLong(string operacao)
 	cout << "Latlong " << dec << preConv << endl;
 
 	grau = preConv/100000;
-	
+
 	cout << "Latlong graus " << dec << grau << endl;
-	
+
 	preConv -= grau * 100000;
 	minuto = preConv/1000;
-	
+
 	cout << "Latlong " << dec << preConv << endl;
 	cout << "Latlong minutos " << dec << minuto << endl;
-	
+
 	preConv -= minuto * 1000;
 	segundo = ((double)preConv)/10.0;
 
@@ -407,10 +411,10 @@ void parseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiro
 	hfull.spanAcel = (unsigned int ) strHfull.at( 42 );
 	//hfull.reservado3[3];
 	//hfull.verConsistenciaSetup;
-	//hfull.confHardwareRe; //Configurações de Hardware (Redundância)
+	//hfull.confHardwareRe; //Configuracoes de Hardware (Redundancia)
 	//hfull.limiteAnalogico1;
 	//hfull.limiteAnalogico234[3];
-	//hfull.lapsosGravacaoEvento; //Lapsos de gravação do evento
+	//hfull.lapsosGravacaoEvento; //Lapsos de gravacao do evento
 	///hfull.reservado4[8];
 	//hfull.volume;
 	//hfull.parametrosGPS;
@@ -476,7 +480,7 @@ void parseHSYNC(string hsync)
 }
 
 void parseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo){
-	
+
 	//procurar trecho pre-persistido que termine com ponteiroIni-1 e apaga-lo
 	bluetec::sBluetecHeaderFile header;
 	char tBuffer[500000];
@@ -518,7 +522,7 @@ void parseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo){
 }
 
 void parseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim){
-	
+
 	struct sLapso lapso;
 	bluetec::sBluetecHeaderFile header;
 	string pLapso;
@@ -590,7 +594,7 @@ void parseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim){
 
 }
 
-void transmitir_dados_serializados(pacote_posicao::bluetec400 data)
+void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 {
 	/*
 	{
@@ -687,7 +691,7 @@ void transmitir_dados_serializados(pacote_posicao::bluetec400 data)
 					"Digital1" << digital1 << "Digital2" << digital2 << "Digital3" << digital3 <<
 					"Digital4" << digital4 << "AcelerometroY" << accelerometerY << "Hodometro" << hodometer <<
 					"Ignicao" << ignition << "Rpm" << rpm << "Freio" << breaks
-				)
+					)
 				);
 
 	cout << "------------JSON Begin" << endl;
@@ -697,7 +701,7 @@ void transmitir_dados_serializados(pacote_posicao::bluetec400 data)
 	pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
 }
 
-void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
+void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 {
 	fileManager.setPath("/home/murilo/Documents/bluetec/data/");
 
@@ -762,20 +766,20 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 		ponteiroIni = header.beginPointer;
 		lapso.timestamp = header.timestamp;
 		switch (header.dataType){
-			case bluetec::enumDataType::HSYNS_DADOS:
-			case bluetec::enumDataType::HSYNS:
-				//nesse caso o trecho ja foi iniciado entao o primeiro lapso deve ser restaurado
-				lapsoSetup( tBuffer, lapso );
-				tipoDado = bluetec::enumDataType::HSYNS_DADOS;
-				//apago o lapso temporario...
-				fileManager.delFile( getVeioid(), header.headerFile );
+		case bluetec::enumDataType::HSYNS_DADOS:
+		case bluetec::enumDataType::HSYNS:
+			//nesse caso o trecho ja foi iniciado entao o primeiro lapso deve ser restaurado
+			lapsoSetup( tBuffer, lapso );
+			tipoDado = bluetec::enumDataType::HSYNS_DADOS;
+			//apago o lapso temporario...
+			fileManager.delFile( getVeioid(), header.headerFile );
 			break;
-			case bluetec::enumDataType::DADOS:
-				//nesse caso o pedaco de dados encontrado nao significa nada entao sera apenas atualizado...
-				dados = string(tBuffer) + dados;
-				// ...deleto esse arquivo temporario para sobrescreve-lo...
-				fileManager.delFile( getVeioid(), header.headerFile );
-				tipoDado = bluetec::enumDataType::DADOS;
+		case bluetec::enumDataType::DADOS:
+			//nesse caso o pedaco de dados encontrado nao significa nada entao sera apenas atualizado...
+			dados = string(tBuffer) + dados;
+			// ...deleto esse arquivo temporario para sobrescreve-lo...
+			fileManager.delFile( getVeioid(), header.headerFile );
+			tipoDado = bluetec::enumDataType::DADOS;
 			break;
 		}
 	}
@@ -998,7 +1002,7 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 
 								//Envia para a fila o pacote de posicao ja em sem formato final protobuf.
 								bluetecPacote.SerializeToString(&serializado);
-								transmitir_dados_serializados(bluetecPacote);
+								PersistJSONData(bluetecPacote);
 								bluetecPacote.Clear();
 								//bluetecPacote.clear_tb();
 								//reinicia o tamanho maximo do pacote pois ja enviou
@@ -1040,7 +1044,7 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 						cout << " tamanho maximo atingido, enviando pacote com " << dec << sizePacote / lapsoSize << " lapsos de " << dec << lapsoSize << " bytes" << endl;
 						//se estourar ja envia antes
 						bluetecPacote.SerializeToString( &serializado );
-						transmitir_dados_serializados( bluetecPacote );
+						PersistJSONData(bluetecPacote);
 						bluetecPacote.clear_tb();
 						//reinicia o valor do tamanho do pacote com o tamanho do lapso que nao foi enviado
 						sizePacote = lapsoSize;
@@ -1069,8 +1073,8 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 
 		} //end while
 
-		bluetecPacote.SerializeToString( &serializado );
-		transmitir_dados_serializados( bluetecPacote );
+		bluetecPacote.SerializeToString(&serializado);
+		PersistJSONData(bluetecPacote);
 		bluetecPacote.clear_tb();
 
 		//se nao tiver fim de trecho, precisa retornar o ultimo lapso para
@@ -1090,70 +1094,152 @@ void parseDados(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 
 }
 
-int protocolo::preenche_cadastro(pacote_posicao::equip_contrato *contrato, std::string chave, cache_cadastro &retorno)
+Protocol::Protocol()
 {
-	retorno.veioid = 0;
 
-	retorno.esn = atoi(chave.c_str());
-
-	//cache_cadastral::consulta_cadastro(retorno, chave);
-	// MOCK
-	retorno.esn = 0;
-	retorno.id = 0;
-	retorno.antena_int = 0;
-	retorno.antena_text = "";
-	retorno.antena_tipo = 0;
-	retorno.projeto = 0;
-	retorno.clioid = 0;
-	retorno.ger1 = 0;
-	retorno.ger2 = 0;
-	retorno.ger3 = 0;
-	retorno.connumero = 0;
-	retorno.veioid = 123456;
-	retorno.tipo_contrato = 0;
-	retorno.classe = 0;
-	retorno.serial0 = 0;
-	retorno.serial1 = 0;
-	retorno.is_sasgc = 0;
-	retorno.tipo_veiculo = 0;
-	retorno.debug = 0;
-	retorno.placa = "TCM0900";
-	retorno.rpm_maximo = 0;
-	retorno.atuadores.clear();
-	retorno.sensores.clear();
-
-	if(retorno.veioid > 0)
-	{
-		//preenche_campos_cadastro(contrato, retorno);
-		// MOCK
-		contrato->set_esn(retorno.esn);
-		contrato->set_veioid(retorno.veioid);
-		contrato->set_clioid(retorno.clioid);
-		contrato->set_is_sasgc(retorno.is_sasgc);
-		contrato->set_tipo_contrato(retorno.tipo_contrato);
-		contrato->set_classe(retorno.classe);
-
-		// retira a nescessidade de implementacao individual em cada parser
-		contrato->set_protocolo(projeto2protocolo(retorno.projeto));
-		contrato->set_id(retorno.id);
-
-		contrato->set_porta_panico(0);
-		contrato->set_porta_bloqueio(0);
-
-		contrato->set_connumero(retorno.connumero);
-		contrato->set_tipo_veiculo(retorno.tipo_veiculo);
-
-		return 1;
-	}
-	else
-	{
-		contrato->set_esn(atoi(chave.c_str()));
-	}
-
-	return 0;
 }
 
-void protocolo::processa_pacote(const char *buffer, int len, mongo::DBClientConnection *dbClient)
+Protocol::~Protocol()
+{
+
+}
+
+void Protocol::GetClientData(cache_cadastro &retorno, std::string chave)
+{
+	// Connect to mysql
+	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
+							 , pConfiguration->GetMySQLUser()
+							 , pConfiguration->GetMySQLPassword()
+							 , pConfiguration->GetMySQLScheme());
+	Dbg(TAG "Connected to MySQL");
+
+	string query("");
+	query.append("SELECT V.veioid AS veiculo_id, "
+					"V.vei_placa AS placa, "
+					"E.equip_id AS equip_id, "
+					"C.clinome AS cliente "
+				"FROM clientes C "
+				"JOIN veiculos V ON V.vei_clioid=C.id "
+				"JOIN equipamentos E ON V.vei_equoid=E.equip_id "
+				"WHERE "
+					"V.vei_placa = '")
+			.append(chave)
+			.append("'");
+
+	Dbg(TAG "Query: %s", query.c_str());
+
+	if(pMysqlConnector->Execute(query))
+	{
+		auto mysqlResult = pMysqlConnector->Result();
+		if(mysqlResult)
+		{
+			auto mysqlRow = pMysqlConnector->FetchRow(mysqlResult);
+			if(mysqlRow)
+			{
+				retorno.veioid = atoi(mysqlRow[0]);
+				retorno.placa = mysqlRow[1];
+				retorno.id = atoi(mysqlRow[2]);
+				retorno.clientName = mysqlRow[3];
+
+				Dbg(TAG "Vehicle id: %d", retorno.veioid);
+				Dbg(TAG "Plate: %s", retorno.placa.c_str());
+				Dbg(TAG "Equipment id: %d", retorno.id);
+				Dbg(TAG "Client name: %s", retorno.clientName.c_str());
+
+				pMysqlConnector->FreeResult(mysqlResult);
+			}
+		}
+	}
+
+	pMysqlConnector->Disconnect();
+}
+
+uint32_t Protocol::CreateClient(std::string clientName)
+{
+	// Connect to mysql
+	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
+							 , pConfiguration->GetMySQLUser()
+							 , pConfiguration->GetMySQLPassword()
+							 , pConfiguration->GetMySQLScheme());
+
+	string query("");
+	query.append("INSERT INTO clientes SET clinome = '").append(clientName).append("'");
+	pMysqlConnector->Execute(query);
+
+	// Diconnect from mysql
+	pMysqlConnector->Disconnect();
+
+	// return inserted registry id
+	return pMysqlConnector->InsertedID();
+}
+
+uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
+{
+	// Connect to mysql
+	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
+							 , pConfiguration->GetMySQLUser()
+							 , pConfiguration->GetMySQLPassword()
+							 , pConfiguration->GetMySQLScheme());
+
+	string query("");
+	query.append("INSERT INTO equipamentos SET equip_id = default")
+			.append(", projetos_proj_id = ").append(std::to_string(projectId))
+			.append(", equip_imei = ").append(std::to_string(equipIMei))
+			.append(", equip_insert_time = CURRENT_TIMESTAMP");
+	pMysqlConnector->Execute(query);
+
+	// Diconnect from mysql
+	pMysqlConnector->Disconnect();
+
+	// return inserted registry id
+	return pMysqlConnector->InsertedID();
+}
+
+uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::string plate)
+{
+	// Connect to mysql
+	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
+							 , pConfiguration->GetMySQLUser()
+							 , pConfiguration->GetMySQLPassword()
+							 , pConfiguration->GetMySQLScheme());
+
+	string query("");
+	query.append("INSERT INTO veiculos SET veioid = default")
+			.append(", vei_clioid = ").append(std::to_string(clientId))
+			.append(", vei_equoid = ").append(std::to_string(equipId))
+			.append(", vei_placa = '").append(plate).append("'");
+	pMysqlConnector->Execute(query);
+
+	// Diconnect from mysql
+	pMysqlConnector->Disconnect();
+
+	// return inserted registry id
+	return pMysqlConnector->InsertedID();
+}
+
+void Protocol::FillDataContract(std::string clientName, std::string plate, cache_cadastro &retorno)
+{
+	retorno.veioid = 0;
+	retorno.esn = atoi(plate.c_str());
+
+	// Get client from mysql database
+	GetClientData(retorno, plate);
+
+	// Case this plate does not exist, create it
+	if(retorno.veioid == 0)
+	{
+		uint32_t clientId = CreateClient(clientName);
+		uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), 1);
+		uint32_t vehiId = CreateVehicle(clientId, equipId, plate);
+
+		retorno.veioid = vehiId;
+		retorno.placa = plate;
+		retorno.id = equipId;
+		retorno.clientName = clientName;
+	}
+}
+
+void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbClient)
 {
 	if(!pDBClientConnection)
 		pDBClientConnection = dbClient;
@@ -1167,93 +1253,87 @@ void protocolo::processa_pacote(const char *buffer, int len, mongo::DBClientConn
 	pacote = bluetecPacote.mutable_pe();
 	contrato = pacote->mutable_ec();
 
-	/* buffer contem o path do arquivo recebido.
-		 *
-		 * ****************** ATENÇÃO ******************************
-		 * Abrir o path como somente LEITURA, nao abrir para escrita.
-		 */
-	std::cout << "Processando :" << buffer << std::endl;
+	Dbg(TAG "Processing: %s", path);
 
-	//obtendo a placa do path...
-	std::string placa( buffer );
-	placa = placa.substr( 0, placa.find_last_of( "/" ) );
-	placa = placa.substr( placa.find_last_of( "/" ) + 1, placa.length() );
-	std::transform( placa.begin(), placa.end(), placa.begin(), ::toupper );
+	// Tokenize path to get client, plate and file
+	std::vector<std::string> tokens;
+	split(tokens, path, is_any_of("/"));
 
-	//obtendo o nome do arquivo
-	std::string arquivo( buffer );
-	arquivo = arquivo.substr( arquivo.find_last_of( "/" ) + 1, arquivo.length() );
-	std::transform( arquivo.begin(), arquivo.end(), arquivo.begin(), ::toupper );
-	std::cout << "Arquivo sendo processado :" << arquivo << std::endl;
+	// The client name is the parent folder at -3 position
+	std::string clientName(tokens[tokens.size() - 3]);
+	std::transform(clientName.begin(), clientName.end(), clientName.begin(), ::toupper);
 
-	//no minimo o nome do arquivo tem que ser BT4
-	if( arquivo.length() < 3 || ( arquivo.substr( 0, 3 ) != "BT4" ) )
+	// The plate name is the subfolder at -2 position
+	std::string plate(tokens[tokens.size() - 2]);
+	std::transform(plate.begin(), plate.end(), plate.begin(), ::toupper);
+
+	// The file name is the last position
+	std::string fileName(tokens[tokens.size() - 1]);
+	std::transform(fileName.begin(), fileName.end(), fileName.begin(), ::toupper);
+
+	Info(TAG "Processing file: %s", fileName.c_str());
+
+	// Verify the name of file to contains BT4
+	if(fileName.length() < 3 || ( fileName.substr( 0, 3 ) != "BT4"))
 	{
-		std::cout << "Arquivo nao BT4 Ignorando..." << std::endl;
+		Info(TAG "Ignoring %s, it is not in BT4 format", fileName.c_str());
 		return;
 	}
 
-	// Obtem informacoes cadastrais.
-	preenche_cadastro(contrato, placa.c_str(), cad);
+	// Create or use a contract data
+	FillDataContract(clientName, plate.c_str(), cad);
 
-	if( !cad.veioid )
+	// Open the data file
+	in = fopen(path, "rb");
+
+	if(in)
 	{
-		cout << "Placa nao cadastrada.... " << endl;
-		return;
-	}
-
-	in = fopen( buffer, "rb" );
-
-	if( in )
-	{
-
-		puts( "DEBUG -- CARREGANDO ARQUIVO" );
+		Dbg(TAG "Loading file - %s", fileName.c_str());
 
 		size_t lSize;
 		size_t result;
 
-		fseek( in, 0, SEEK_END );
+		// Read file
+		fseek(in, 0, SEEK_END);
+		lSize = ftell(in);
+		rewind(in);
+		result = fread(bt4, 1, lSize, in);
 
-		lSize = ftell( in );
-
-		rewind( in );
-
-		result = fread( bt4, 1, lSize, in );
-
-		if( ( result != lSize ) || ( lSize == 0 ) )
+		// Validate the content of file
+		if((result != lSize) || (lSize == 0))
 		{
-			puts( "Reading error" );
+			Error(TAG "Reading error");
 			return;
 		}
 
-
-		std::string sbt4( bt4, bt4 + lSize );
+		std::string sbt4(bt4, bt4 + lSize);
 
 		size_t pos = 0;
-		int arquivo = (int ) sbt4[1];
+		int arquivo = (int) sbt4[1];
 
-		cout << "DEBUG -- ARQUIVO " << dec << arquivo << endl;
+		Dbg(TAG "File: %d", /*dec,*/ arquivo);
 
-		long ponteiroIni = ( (long ) bt4[2] * 65536 ) + ( (long ) bt4[3] * 256 ) + (long ) bt4[4];
-		cout << "DEBUG -- PONTEIRO INI " << (long ) bt4[2] << "*65536+" << (long ) bt4[3] << "*256+" << (long ) bt4[4] << "=" << dec << ponteiroIni << endl;
+		long ponteiroIni = ((long ) bt4[2] * 65536) + ((long) bt4[3] * 256) + (long ) bt4[4];
+		Dbg(TAG "Start point %d * 65536 + %d * 256 + %d = %d", (long) bt4[2], (long) bt4[3], (long) bt4[4], /*dec,*/ ponteiroIni);
 
-		long ponteiroFim = ( (long ) bt4[lSize - 8] * 65536 ) + ( (long ) bt4[lSize - 7] * 256 ) + (long ) bt4[lSize - 6];
-		cout << "DEBUG -- PONTEIRO FIM " << dec << ponteiroFim << endl;
+		long ponteiroFim = ((long) bt4[lSize - 8] * 65536 ) + ((long) bt4[lSize - 7] * 256 ) + (long) bt4[lSize - 6];
+		Dbg(TAG "End point %d", /*dec,*/ ponteiroFim);
 
-		//a cada 1200 bytes do bluetec gera um cabecalho com 5 caracteres no comeco e 8 no final
-		//esses caracteres devem ser removidos
-		sbt4.erase( 0, 5 );
-		sbt4.erase( sbt4.length() - 8, 8 );
+		// For each 1200 bytes, the bluetec protocol generate a header with 5 characters at begin and 8 at end
+		// this characters must be removed
+		sbt4.erase(0, 5);
+		sbt4.erase(sbt4.length() - 8, 8);
 		lSize -= 13;
 
-		for(size_t i = 1200; i < sbt4.length(); i += 1200 )
+		for(size_t i = 1200; i < sbt4.length(); i += 1200)
 		{
-
-			sbt4.erase(i, 13); // apagaa os 13 bytes (5 de inicio e 8 de fim) de uma transicao de um subpacote para outro
+			// Removes 13 bytes(5 at start + 8 at end) in a transaction from a subpackage to another
+			sbt4.erase(i, 13);
 			lSize -= 13;
 		}
 
-		puts("DEBUG -- INICIANDO LAPSOS");
+		Dbg(TAG "Starting lapses");
+
 		//int tipo_dado = bluetec::enumDataType::DADOS;
 		size_t inicio = 0;
 
@@ -1269,14 +1349,16 @@ void protocolo::processa_pacote(const char *buffer, int len, mongo::DBClientConn
 		fimTrecho.push_back((unsigned char ) 0xA5);
 		fimTrecho.push_back((unsigned char ) 0xA7);
 
-		cout << "DEBUG -- BUSCANSO CABECALHOS... " << endl;
+		Dbg(TAG "Searching headers");
+
 		for(size_t i = 0; i < sbt4.length(); i++)
 		{
-			if(sbt4.at(i) == (unsigned char) 0x48){
-
-				if(sbt4.compare(i,5,"HSYNC")==0){
+			if(sbt4.at(i) == (unsigned char) 0x48)
+			{
+				if(sbt4.compare(i,5,"HSYNC") == 0)
+				{
 					cout << "DEBUG --  ACHOU HSYNC em " << dec << i << endl;
-					if( inicio < i - lHsync )
+					if(inicio < i - lHsync)
 					{
 						cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 6 de " <<dec<< inicio << " a " << i - lHsync - 1 << endl;
 						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i - lHsync - 1)) << endl;
@@ -1294,14 +1376,14 @@ void protocolo::processa_pacote(const char *buffer, int len, mongo::DBClientConn
 					}
 					cout << "DEBUG -- inicio " << dec << inicio << " i " << dec << i << endl;
 
-					
+
 				} else if(sbt4.compare(i,5,"HSYNS")==0){
 					cout << "DEBUG --  ACHOU HSYNS em " << dec << i << endl;
 					if( inicio < i - lHsyns )
 					{
 						cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 6 de " <<dec<< inicio << " a " << i - lHsyns - 1 << endl;
 						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i - lHsyns - 1)) << endl;
-						parseDados(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo);
+						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo);
 						inicio = i - lHsyns;
 					}
 					if( inicio == i -  lHsyns)
@@ -1317,7 +1399,7 @@ void protocolo::processa_pacote(const char *buffer, int len, mongo::DBClientConn
 					}
 					cout << "DEBUG -- inicio " << dec << inicio << " i " << dec << i << endl;
 
-					
+
 				} else if(sbt4.compare(i,5,"HFULL")==0){
 
 					cout << "DEBUG --  ACHOU HFULL em " << dec << i << endl;
@@ -1326,7 +1408,7 @@ void protocolo::processa_pacote(const char *buffer, int len, mongo::DBClientConn
 
 						cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 6 de " <<dec<< inicio << " a " << i - lHfull - 1 << endl;
 						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i - lHfull - 1)) << endl;
-						parseDados(sbt4.substr(inicio, i - inicio - lHfull), ponteiroIni + inicio, ponteiroIni + i-lHfull - 1, arquivo);
+						ParseData(sbt4.substr(inicio, i - inicio - lHfull), ponteiroIni + inicio, ponteiroIni + i-lHfull - 1, arquivo);
 						inicio = i - lHfull;
 					}
 					if( inicio == i -  lHfull)
@@ -1342,20 +1424,20 @@ void protocolo::processa_pacote(const char *buffer, int len, mongo::DBClientConn
 
 				}
 
-			}else if(i+4 < sbt4.length() &&
-					 sbt4.at(i) == (unsigned char) 0x82 &&
-					 sbt4.compare(i,4,fimTrecho)==0)
+			}
+			else if(i+4 < sbt4.length() &&
+					sbt4.at(i) == (unsigned char) 0x82 &&
+					sbt4.compare(i,4,fimTrecho)==0)
 			{
 				cout << "DEBUG --  ACHOU FIM DE TRECHO EM " << dec << i << endl;
-				if( inicio < i)
+				if(inicio < i)
 				{
 					cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 6 de " <<dec<< inicio << " a " << i-1 << endl;
 					cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i - 1)) << endl;
-					parseDados(sbt4.substr(inicio, i - inicio), ponteiroIni + inicio, ponteiroIni + i-1, arquivo);
+					ParseData(sbt4.substr(inicio, i - inicio), ponteiroIni + inicio, ponteiroIni + i-1, arquivo);
 					inicio = i;
 				}
-				if( inicio == i &&
-						i + lFimTrecho <= sbt4.length())
+				if( inicio == i && i + lFimTrecho <= sbt4.length())
 				{
 					cout << "DEBUG -- FECHANDO TRECHO DE PONTEIRO FINAL " <<dec<< i-1 << endl;
 					parseA3A5A7(ponteiroIni + i, arquivo);
@@ -1364,27 +1446,25 @@ void protocolo::processa_pacote(const char *buffer, int len, mongo::DBClientConn
 				}
 				cout << "DEBUG -- inicio " << dec << inicio << " i " << dec << i << endl;
 			}
-
-
 		}
 
-		if(inicio < sbt4.length()){
+		if(inicio < sbt4.length()) {
 			cout << "DEBUG -- ENVIANDO TIPO 6 NO FIM DO BUFFER " <<dec<< inicio << " a " << sbt4.length()-1 << endl;
 			cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(sbt4.length()-1)) << endl;
-			parseDados(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo);
+			ParseData(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo);
 		}
 
 		fclose( in );
 	}
 
 }
-int protocolo::projeto2protocolo(uint32_t projeto)
-{
 
+int Protocol::Project2Protocol(uint32_t projeto)
+{
 	switch (projeto)
 	{
-	case EQUIPAMENTO_BD_MTC550:
-		return PROTO_MTC550;
+		case EQUIPAMENTO_BD_MTC550:
+			return PROTO_MTC550;
 		break;
 
 		/*******
@@ -1430,6 +1510,6 @@ int protocolo::projeto2protocolo(uint32_t projeto)
 	}
 
 	return projeto;
-
 }
+
 }

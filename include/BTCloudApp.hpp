@@ -9,7 +9,7 @@
 #include "Defines.hpp"
 #include "BlueTecFileManager.h"
 #include "Configuration.hpp"
-
+#include "Protocol.hpp"
 
 using namespace Sascar;
 using namespace bluetec;
@@ -25,13 +25,13 @@ class BTCloudApp : public IApp, public IEventFileSystemListener
 		// IApp - IManager
 		virtual bool Initialize() override;
 		virtual bool Shutdown() override;
+		void OnFileSystemNotifyChange(const EventFileSystem *ev);
 
 	private:
-		BlueTecFileManager cFileManager;
 		DBClientConnection cDBConnection;
-		MysqlConnector cMysqlConnection;
+		BlueTecFileManager cFileManager;
+		Protocol cProtocol;
 
-		void OnFileSystemNotifyChange(const EventFileSystem *ev);
 };
 
 #endif // BTCLOUD_APP_HPP

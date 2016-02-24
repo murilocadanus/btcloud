@@ -1,6 +1,5 @@
-#ifndef __PROTOCOLO_H__
-
-#define __PROTOCOLO_H__
+#ifndef PROTOCOL_HPP
+#define PROTOCOL_HPP
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -9,6 +8,7 @@
 #include <string>
 #include "entities/pacote_posicao.pb.h"
 #include "mongo/client/dbclient.h" // for the driver
+#include "entities/bluetec400.pb.h"
 
 using namespace std;
 
@@ -28,7 +28,7 @@ struct cache_cadastro {
 	uint32_t connumero;
 	uint32_t veioid;
 	uint32_t tipo_contrato;
-	uint32_t classe ;
+	uint32_t classe;
 	uint32_t serial0;
 	uint32_t serial1;
 	uint32_t is_sasgc;
@@ -41,6 +41,7 @@ struct cache_cadastro {
 	std::vector<int32_t> atuadores;
 	uint32_t rpm_maximo;
 	std::string clincid;
+	std::string clientName;
 };
 
 enum pacote_recebido {
@@ -77,10 +78,23 @@ enum pacote_recebido {
 #define EQUIPAMENTO_BD_MXT150SBTEC  33
 
 
-class protocolo {
+class Protocol {
 
 	public:
+		Protocol();
+		virtual ~Protocol();
+		int Project2Protocol(uint32_t projeto);
+		void Process(const char *path, int len, mongo::DBClientConnection *dbClient);
+		void FillDataContract(string clientName, std::string plate, cache_cadastro &retorno);
+		void PersistJSONData(pacote_posicao::bluetec400 data);
+		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo);
 
+		void GetClientData(cache_cadastro &retorno, std::string chave);
+		uint32_t CreateClient(std::string clientName);
+		uint32_t CreateEquipment(uint32_t projectId, uint32_t equipIMei);
+		uint32_t CreateVehicle(uint32_t clientId, uint32_t equipId, string plate);
+
+	public:
 		static char nome_projeto[50];
 		static int projeto;
 
@@ -103,28 +117,10 @@ class protocolo {
 
 		static char modelos_sasgc[200];
 
-		protocolo();
-		~protocolo();
-
-	public:
-		static int projeto2protocolo(uint32_t projeto);
-
-		static string bufferToHex(const unsigned char *buffer, const int size);
-
-		// algoritmos de crc
-		static uint8_t calcula_crc_sum_8 (const unsigned char *data, int data_len);
-		static uint16_t calcula_crc_16 (const unsigned char *data, int data_len);
-
-		// metodos a serem implementados pelos subdiretorios
-		static void setup();
-		static int tamanho_pacote(char *buffer, int len);
-
-		static int preenche_cadastro(pacote_posicao::equip_contrato *contrato, std::string chave, cache_cadastro &retorno);
-		static void processa_pacote(const char *buffer, int len, mongo::DBClientConnection *dbClient);
-		static void transmitir_dados_serializados(std::string data);
+	private:
+		mongo::DBClientConnection *pDBClientConnection;
 };
 
+}
 
-};
-
-#endif
+#endif // PROTOCOL_HPP
