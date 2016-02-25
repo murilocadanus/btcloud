@@ -9,6 +9,7 @@
 #include "entities/pacote_posicao.pb.h"
 #include "mongo/client/dbclient.h" // for the driver
 #include "entities/bluetec400.pb.h"
+#include "BlueTecFileManager.h"
 
 using namespace std;
 
@@ -50,32 +51,32 @@ enum pacote_recebido {
 	PACOTE_NACK,
 	PACOTE_DADOS,
 	PACOTE_SETUP,
-	PACOTE_RESTART, // restart troca de um grupo de comandos
+	PACOTE_RESTART, // Restart change the group of commands
 	PACOTE_APRESENTACAO,
 	PACOTE_RESTART_PARTE_COMANDO
 };
 
-#define PROTO_SAS401     0x0003
-#define PROTO_VDO        0x0009
-#define PROTO_MTC600     0x000d
-#define PROTO_MXT150     0x000f
-#define PROTO_VDOQB      0x0010
-#define PROTO_MXT100     0x0011
-#define PROTO_MTC550     0x0013
-#define PROTO_MXT140     0x0014
-#define PROTO_VDO_SBTEC  0x0017
-#define PROTO_MXT150_SBTEC 0x0018
+#define PROTO_SAS401		0x0003
+#define PROTO_VDO			0x0009
+#define PROTO_MTC600		0x000d
+#define PROTO_MXT150		0x000f
+#define PROTO_VDOQB			0x0010
+#define PROTO_MXT100		0x0011
+#define PROTO_MTC550		0x0013
+#define PROTO_MXT140		0x0014
+#define PROTO_VDO_SBTEC		0x0017
+#define PROTO_MXT150_SBTEC	0x0018
 
-#define EQUIPAMENTO_BD_MTC           8
-#define EQUIPAMENTO_BD_VDO          16
-#define EQUIPAMENTO_BD_MTC600       20
-#define EQUIPAMENTO_BD_MXT150       27
-#define EQUIPAMENTO_BD_MXT100       29
-#define EQUIPAMENTO_BD_RVS_QB       30
-#define EQUIPAMENTO_BD_MTC550       46
-#define EQUIPAMENTO_BD_MXT140       55
-#define EQUIPAMENTO_BD_RVSSBTEC     38
-#define EQUIPAMENTO_BD_MXT150SBTEC  33
+#define EQUIPAMENTO_BD_MTC			8
+#define EQUIPAMENTO_BD_VDO			16
+#define EQUIPAMENTO_BD_MTC600		20
+#define EQUIPAMENTO_BD_MXT150		27
+#define EQUIPAMENTO_BD_MXT100		29
+#define EQUIPAMENTO_BD_RVS_QB		30
+#define EQUIPAMENTO_BD_MTC550		46
+#define EQUIPAMENTO_BD_MXT140		55
+#define EQUIPAMENTO_BD_RVSSBTEC		38
+#define EQUIPAMENTO_BD_MXT150SBTEC	33
 
 
 class Protocol {
@@ -83,16 +84,21 @@ class Protocol {
 	public:
 		Protocol();
 		virtual ~Protocol();
-		int Project2Protocol(uint32_t projeto);
 		void Process(const char *path, int len, mongo::DBClientConnection *dbClient);
 		void FillDataContract(string clientName, std::string plate, cache_cadastro &retorno);
-		void PersistJSONData(pacote_posicao::bluetec400 data);
 		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo);
 
+	private:
+		int Project2Protocol(uint32_t projeto);
+		void PersistJSONData(pacote_posicao::bluetec400 data);
 		void GetClientData(cache_cadastro &retorno, std::string chave);
 		uint32_t CreateClient(std::string clientName);
 		uint32_t CreateEquipment(uint32_t projectId, uint32_t equipIMei);
 		uint32_t CreateVehicle(uint32_t clientId, uint32_t equipId, string plate);
+
+		void ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo);
+		void ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo);
+		void ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim);
 
 	public:
 		static char nome_projeto[50];
@@ -119,6 +125,7 @@ class Protocol {
 
 	private:
 		mongo::DBClientConnection *pDBClientConnection;
+		bluetec::BlueTecFileManager cFileManager;
 };
 
 }

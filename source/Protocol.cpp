@@ -1,5 +1,6 @@
 
 #include "Protocol.hpp"
+#include "util/ProtocolUtil.hpp"
 #include <time.h>
 #include <vector>
 #include <string>
@@ -9,7 +10,6 @@
 #include <stdio.h>
 #include <algorithm>
 #include <util/Log.hpp>
-#include "BlueTecFileManager.h"
 #include "clock.h"
 #include "mongo/client/dbclient.h" // for the driver
 #include "Configuration.hpp"
@@ -27,7 +27,6 @@ namespace Sascar
 std::string serializado;
 pacote_posicao::equip_flags *eventoflag;
 pacote_posicao::equip_posicao *posicao;
-static bluetec::BlueTecFileManager fileManager;
 static int lapsoSize = sizeof(long int) + sizeof(double) * 6 + sizeof(int) * 13 + 16;
 pacote_posicao::t_telemetria_bluetec400 *telemetria;
 pacote_posicao::pacote_enriquecido *pacote;
@@ -35,46 +34,9 @@ pacote_posicao::bluetec400 bluetecPacote;
 cache_cadastro cad;
 pacote_posicao::t32_odo_vel *odo_vel_gps;
 
-typedef struct saidas
-{
-		unsigned int saida0 :1;
-		unsigned int saida1 :1;
-		unsigned int saida2 :1;
-		unsigned int saida3 :1;
-		unsigned int saida4 :1;
-		unsigned int saida5 :1;
-		unsigned int saida6 :1;
-		unsigned int saida7 :1;
-}__attribute__ ((packed)) saidas;
 
-typedef struct sLapso
-{
-		//long int timestamp
-		long int timestamp;
-		double velocidade;
-		double rpm;
-		double acelx;
-		double acely;
-		int ed1;
-		int ed2;
-		int ed3;
-		int ed4;
-		int ed5;
-		int ed6;
-		int ed7;
-		int ed8;
-		int an1;
-		int an2;
-		int an3;
-		int an4;
-		double odometro;
-		double horimetro;
-		int idTrecho;
-		std::string operacao;
-		std::string ibtMotorista;
-} sLapso;
 
-void lapsoToTelemetria(pacote_posicao::t_telemetria_bluetec400 *tele, struct sLapso& lapso)
+void lapsoToTelemetria(pacote_posicao::t_telemetria_bluetec400 *tele, struct Sascar::ProtocolUtil::sLapso& lapso)
 {
 	tele->set_trecho( lapso.idTrecho );
 	tele->set_datahora( lapso.timestamp );
@@ -99,7 +61,7 @@ void lapsoToTelemetria(pacote_posicao::t_telemetria_bluetec400 *tele, struct sLa
 	tele->set_operacao( lapso.operacao );
 }
 
-void lapsoSetup(string lapso, struct sLapso& setup)
+void lapsoSetup(string lapso, struct Sascar::ProtocolUtil::sLapso& setup)
 {
 	if( lapso.length() == 0 )
 		return;
@@ -156,234 +118,19 @@ uint32_t getVeioid()
 	return cad.veioid;
 }
 
-// Transforma uma struct sLapso em um formato persistivel de texto
-string persistableLapso(sLapso *l)
+void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo)
 {
-	if( l == NULL )
-	{
-		return "";
-	}
+	Dbg(TAG "Init parse HFULL");
 
-	std::stringstream ss;
-	ss << l->velocidade << "##" << l->rpm << "##" << l->acelx << "##" << l->acely << "##" << l->ed1 << l->ed2 << l->ed3 << l->ed4 << l->ed5 << l->ed6 << l->ed7 << l->ed8 << "##" << l->an1 << "##" << l->an2 << "##" << l->an3 << "##" << l->an4 << "##" << l->odometro << "##" << l->horimetro << "##" << l->ibtMotorista;
-
-	return ss.str();
-}
-
-/*
-	 Recebe o byte de expansao e calcula seu tamanho
-	 */
-int tamanhoLapsoExpansao(char expansao)
-{
-
-	char buffer[255];
-	buffer[0] = expansao;
-	saidas *p;
-	p = (saidas* ) buffer;
-
-	return ( p->saida3 * 7 ) + p->saida4 + p->saida5 + p->saida6 + ( p->saida7 * 2 );
-}
-
-/*
-	 Recebe um struct com as saidas binarias do byte de controle e calcula o tamanho do lapso
-	 */
-int tamanhoLapsoExpansao(saidas *p)
-{
-	return ( p->saida3 * 7 ) + p->saida4 + p->saida5 + p->saida6 + ( p->saida7 * 2 );
-}
-
-/*
-	 Recebe o byte de controle junto ao de expansao e calcula o tamanho do lapso
-	 */
-int tamanhoLapso(char controle, char expansao)
-{
-
-	char buffer[255];
-	buffer[0] = controle;
-	saidas *p;
-	p = (saidas* ) buffer;
-	int expLength = 0;
-
-	if( p->saida0 )
-	{
-
-		return 1 + p->saida1 + p->saida2 + p->saida3 + p->saida4 + p->saida5 + tamanhoLapsoExpansao( expansao );
-
-	}
-	return p->saida1 + p->saida2 + p->saida3 + p->saida4 + p->saida5;
-}
-
-/*
-	 Recebe um struct com as saidas binarias do byte de controle e calcula o tamanho do lapso
-	 */
-int tamanhoLapso(saidas *p)
-{
-	return p->saida1 + p->saida2 + p->saida3 + p->saida4 + p->saida5;
-}
-
-int parseBCDDecimal(unsigned char byte)
-{
-	return (unsigned int ) ( byte / 16 * 10 + byte % 16 );
-}
-
-string parseBCDString(unsigned char byte)
-{
-	return to_string( byte / 16 * 10 ) + to_string( byte % 16 );
-}
-
-tm* parseDataHora(string data)
-{
-
-	struct tm *dataHora;
-	time_t currentTime = 0;
-	time( &currentTime );
-	dataHora = localtime( &currentTime );
-
-	dataHora->tm_year = ( parseBCDDecimal( data.at( 0 ) ) * 100 ) + parseBCDDecimal( data.at( 1 ) ); //'YY'YYMMDDHHMMSS + YY'YY'MMDDHHMMSS
-	dataHora->tm_mon = parseBCDDecimal( data.at( 2 ) ); //YYYY'MM'DDHHMMSS
-	dataHora->tm_mday = parseBCDDecimal( data.at( 3 ) ); //YYYYMM'DD'HHMMSS
-	dataHora->tm_hour = parseBCDDecimal( data.at( 4 ) ); //YYYYMMDD'HH'MMSS
-	dataHora->tm_min = parseBCDDecimal( data.at( 5 ) ); //YYYYMMDDHH'MM'SS
-	dataHora->tm_sec = parseBCDDecimal( data.at( 6 ) ); //YYYYMMDDHHMM'SS'
-
-	dataHora->tm_mon -= 1;
-	dataHora->tm_year -= 1900;
-	//currentTime = mktime(dataHora);
-	return dataHora;
-
-}
-
-string parseHora(string hora)
-{
-	string parsedHora;
-
-	for(int i = 0; i < hora.length(); i++ )
-	{
-
-		parsedHora += to_string( parseBCDDecimal( hora[i] ) );
-	}
-
-	return parsedHora;
-
-}
-
-double parseOdometro(string odometro)
-{
-	//cout << "0 "<< dec << ((double)((unsigned char)odometro.at(0)*65536)) << endl;
-	//cout << "1 "<< dec << ((double)((unsigned char)odometro.at(1)*256))<< endl;
-	//cout << "2 "<< dec << ((double)((unsigned char)odometro.at(2)))<< endl;
-	return ( ( (double ) ( (unsigned char ) odometro.at( 0 ) * 65536 ) ) + ( (double ) ( (unsigned char ) odometro.at( 1 ) * 256 ) ) + (double ) ( (unsigned char ) odometro.at( 2 ) ) ) / 10;
-}
-
-double parseHorimetro(string horimetro)
-{
-	/*cout << hex << setw(2) << setfill('0') << int((unsigned char)horimetro.at(0));
-		cout << hex << setw(2) << setfill('0') << int((unsigned char)horimetro.at(horimetro.length()-1));
-		cout <<  horimetro.length() << endl;*/
-	return ( ( (double ) ( (unsigned char ) horimetro.at( 0 ) * 65536 ) ) + ( (double ) ( (unsigned char ) horimetro.at( 1 ) * 256 ) ) + (double ) ( (unsigned char ) horimetro.at( 2 ) ) ) / 10;
-}
-
-double parseLatLong(string operacao)
-{
-	/*
-
-	O CALCULO DE LATLONG E FEITO COMO NO EXEMPLO:
-
-	Se tivermos uma sequencia de operacao 227477 por exemplo, cada byte deve ser covertido para
-	decimal separadamento e entao multiplicado pelo sua grandeza em dezena. Por exemplo, 22 para
-	deciaml e 34, vezes 65536 (equivalente a 10000 em hexa) e igual a 2228224, somado a 74
-	convertido para decimal 116 * 256 (equivalente a 100) = 29696, somado a 77 em decimal 119.
-	Dessa soma entao devem ser retirados grau, minuto e segundo da seguinte maneira:
-	A soma do exemplo e a seguinte 2228224 + 29696 + 119 = 2258039. Entao:
-		2258039/100000 = 22 graus
-		2258039 - 2200000 = 58039
-		58039/1000 = 58 minutos
-		58039 - 58000 = 039
-		039 /10 = 3.9 segundos
-	Obtidos grau, minuto e segundo, entao a  conversao para o formato decimal de localizacao e feita:
-		posicionamento = grau + (minuto/60) + (segundo/3600)
-
-	*/
-
-	double grau, minuto, segundo;
-	unsigned int preConv;
-	string latLong;
-	preConv =  ((unsigned int)((unsigned char)operacao.at(0)*65536)) +
-			((unsigned int)((unsigned char)operacao.at(1)*256)) +
-			((unsigned int)((unsigned char)operacao.at(2)));
-
-	cout << endl << endl << hex << setw(2) << setfill('0') << int((unsigned char)operacao.at(0))
-		 << hex << setw(2) << setfill('0') << int((unsigned char)operacao.at(1))
-		 << hex << setw(2) << setfill('0') << int((unsigned char)operacao.at(2)) << endl;
-
-	cout << "Latlong " << dec << preConv << endl;
-
-	grau = preConv/100000;
-
-	cout << "Latlong graus " << dec << grau << endl;
-
-	preConv -= grau * 100000;
-	minuto = preConv/1000;
-
-	cout << "Latlong " << dec << preConv << endl;
-	cout << "Latlong minutos " << dec << minuto << endl;
-
-	preConv -= minuto * 1000;
-	segundo = ((double)preConv)/10.0;
-
-	cout << "Latlong " << dec << preConv << endl;
-	cout << "Latlong segundos " << dec << segundo << endl;
-	cout << "Latlong retorno " << dec << grau+(minuto/60.0)+(segundo/3600.0) << endl;
-
-	return grau+(minuto/60.0)+(segundo/3600.0);
-
-}
-
-double parseLatitude(string operacao, int yAxis)
-{
-
-	double latitude = parseLatLong( operacao );
-
-	if( yAxis )
-	{
-		return latitude * -1;
-	}
-	return latitude;
-
-}
-
-double parseLongitude(string operacao, int xAxis, int complemento)
-{
-
-	double longitude = parseLatLong( operacao );
-
-	if( complemento )
-	{
-		longitude += 100;
-	}
-
-	if( xAxis )
-	{
-		return longitude * -1;
-	}
-
-	return longitude;
-
-}
-
-void parseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo)
-{
-
-	//cout << "DEBUG -- Parse HFULL ..." ;
 	bluetec::sHfull hfull;
 	bluetec::sBluetecHeaderFile header;
 	char tBuffer[500000];
 	uint32_t tSize;
 
 	char buffer[255];
-	buffer[0] = (unsigned char ) strHfull.at( 0 );
-	saidas *p;
-	p = (saidas* ) buffer;
+	buffer[0] = (unsigned char) strHfull.at(0);
+	Sascar::ProtocolUtil::saidas *p;
+	p = (Sascar::ProtocolUtil::saidas*) buffer;
 
 	hfull.lapso = 0;
 	hfull.lapso += p->saida0 * 1;
@@ -437,41 +184,49 @@ void parseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiro
 	//hfull.reservado10;
 	//hfull.hfull[5];
 
-	fileManager.saveHfull( getVeioid(), hfull );
+	cFileManager.saveHfull( getVeioid(), hfull );
 
-	cout << "DEBUG -- CORRIGINDO PONTEIRO ANTES E DEPOIS DO HFULL..."<< endl;
-	// se existe algo que encaixe no fim desse hfull...
-	if( fileManager.getBufferFile( getVeioid(), ponteiroFim+1, arquivo, tBuffer, tSize, header ) &&
-			header.beginPointer == ponteiroFim+1 &&
+	Dbg(TAG "Fixing file cursor before and after HFULL");
+
+	// Verify case something matches at the end of this HFULL
+	if(cFileManager.getBufferFile( getVeioid(), ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
+			header.beginPointer == ponteiroFim + 1 &&
 			(header.dataType == bluetec::enumDataType::DADOS ||
-			 header.dataType == bluetec::enumDataType::DADOS_FINAL ||
-			 header.dataType == bluetec::enumDataType::FINAL)){
-		cout << "DEBUG -- HFULL + TEMP"<< endl;
-		// ...deleto essa coisa para sobrescreve-la...
-		fileManager.delFile( getVeioid(), header.headerFile );
-		//... atualizo o ponteiro inicial dessa coisa...
+			header.dataType == bluetec::enumDataType::DADOS_FINAL ||
+			header.dataType == bluetec::enumDataType::FINAL))
+	{
+		Dbg(TAG "HFULL + TEMP");
+
+		// Remove this to overwrite it
+		cFileManager.delFile(getVeioid(), header.headerFile);
+
+		// Update the start cursor
 		header.beginPointer -= 512;
-		//... entao salvo
-		cout << "DEBUG -- saveBufferFile HEADER DATATYPE " << dec << header.dataType << endl;
-		fileManager.saveBufferFile( getVeioid(), tBuffer, tSize, header );
+
+		// Save changes
+		Dbg(TAG "Saving buffer file header data type %d", /*dec, */ header.dataType);
+		cFileManager.saveBufferFile(getVeioid(), tBuffer, tSize, header);
 	}
-	// ou se existe algo que encaixe no comeco desse hfull...
-	if ( fileManager.getBufferFile( getVeioid(), ponteiroIni-1, arquivo, tBuffer, tSize, header ) &&
-		 header.endPointer == ponteiroIni-1 &&
-		 (header.dataType == bluetec::enumDataType::DADOS ||
-		  header.dataType == bluetec::enumDataType::HSYNS ||
-		  header.dataType == bluetec::enumDataType::HSYNS_DADOS)){
-		cout << "DEBUG -- TEMP + HFULL"<< endl;
-		// ...deleto essa coisa para sobrescreve-la...
-		fileManager.delFile( getVeioid(), header.headerFile );
-		//... atualizo o ponteiro inicial dessa coisa...
+
+	// Verify case something matches at the start of this HFULL
+	if(cFileManager.getBufferFile(getVeioid(), ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
+			header.endPointer == ponteiroIni - 1 &&
+			(header.dataType == bluetec::enumDataType::DADOS ||
+			header.dataType == bluetec::enumDataType::HSYNS ||
+			header.dataType == bluetec::enumDataType::HSYNS_DADOS))
+	{
+		Dbg(TAG "TEMP + HFULL");
+
+		// Remove this to overwrite it
+		cFileManager.delFile(getVeioid(), header.headerFile);
+
+		// Update the end cursor
 		header.endPointer += 512;
-		//... entao salvo
-		cout << "DEBUG -- saveBufferFile HEADER DATATYPE " << dec << header.dataType << endl;
-		fileManager.saveBufferFile( getVeioid(), tBuffer, tSize, header );
+
+		// Save changes
+		Dbg(TAG "Saving buffer file header data type %d", /*dec, */ header.dataType);
+		cFileManager.saveBufferFile(getVeioid(), tBuffer, tSize, header);
 	}
-
-
 }
 
 void parseHSYNC(string hsync)
@@ -479,55 +234,63 @@ void parseHSYNC(string hsync)
 
 }
 
-void parseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo){
-
-	//procurar trecho pre-persistido que termine com ponteiroIni-1 e apaga-lo
+void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
+{
+	// Search for route persisted with start cursor = 1 and remove it
 	bluetec::sBluetecHeaderFile header;
 	char tBuffer[500000];
 	uint32_t tSize=0;
 
-	cout << "DEBUG -- PROCURANDO COMECO DESSE FIM DE TRECHO..."<< endl;
-	// se existe algo que encaixe no comeco desse fim de trecho...
-	if( fileManager.getBufferFile( getVeioid(), ponteiroIni-1, arquivo, tBuffer, tSize, header ) &&
-			header.endPointer == ponteiroIni-1 &&
-			header.file == arquivo){
+	Dbg(TAG "Searching the start point in this route");
 
-		cout << "DEBUG -- ESSE FIM DE TRECHO TEM UM COMECO..."<< endl;
+	// Case something matches with the start of this route
+	if(cFileManager.getBufferFile(getVeioid(), ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
+			header.endPointer == ponteiroIni - 1 && header.file == arquivo)
+	{
+		Dbg(TAG "This route has a start point");
 
-		switch (header.dataType){
-		case bluetec::enumDataType::HSYNS_DADOS:
-			cout << "DEBUG -- TRECHO COMPLETO, APAGANDO MEMORIA TEMPORARIA..."<< endl;
-			fileManager.delFile( getVeioid(), header.headerFile );
+		switch(header.dataType)
+		{
+			case bluetec::enumDataType::HSYNS_DADOS:
+				Dbg(TAG "Route completed, removing from temp memory");
+				cFileManager.delFile( getVeioid(), header.headerFile );
 			break;
-		case bluetec::enumDataType::DADOS:
-			cout << "DEBUG -- TRECHO INCOMPLETO, INCREMENTANDO FINAL DE TRECHO..."<< endl;
-			// ...deleto esse arquivo temporario para sobrescreve-lo...
-			fileManager.delFile( getVeioid(), header.headerFile );
-			//... atualizo o tipo de dados...
-			header.dataType = bluetec::enumDataType::DADOS_FINAL;
-			//... entao salvo
-			fileManager.saveBufferFile( getVeioid(), tBuffer, tSize, header );
+
+			case bluetec::enumDataType::DADOS:
+				Dbg(TAG "Route incomplete, increasing end route point");
+
+				// Remove this temp file to overwrite it
+				cFileManager.delFile(getVeioid(), header.headerFile);
+
+				// Update the data type
+				header.dataType = bluetec::enumDataType::DADOS_FINAL;
+
+				// Save it
+				cFileManager.saveBufferFile(getVeioid(), tBuffer, tSize, header);
 			break;
 		}
-
-	}else{
-		//se nao ele precisa ser armazenado temporariamente...
+	}
+	else
+	{
+		// Case this does not need to be saved temporarily
 		header.file = arquivo;
 		header.beginPointer = ponteiroIni;
 		header.dataType = bluetec::enumDataType::FINAL;
-		cout << "DEBUG -- saveBufferFile HEADER DATATYPE " << dec << header.dataType << endl;
-		fileManager.saveBufferFile( getVeioid(), tBuffer, (uint32_t)0, header );
-	}
 
+		Dbg(TAG "Save buffer file header data type");
+		cFileManager.saveBufferFile(getVeioid(), tBuffer, (uint32_t)0, header);
+	}
 }
 
-void parseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim){
+void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim)
+{
+	Dbg(TAG "Init HSYNS %d", /*dec,*/ ponteiroFim);
 
-	struct sLapso lapso;
+	struct Sascar::ProtocolUtil::sLapso lapso;
 	bluetec::sBluetecHeaderFile header;
 	string pLapso;
 
-	lapso.idTrecho = fileManager.getNextIdTrecho();;
+	lapso.idTrecho = cFileManager.getNextIdTrecho();
 	lapso.timestamp = 0;
 	lapso.velocidade = 0;
 	lapso.rpm = 0;
@@ -546,101 +309,58 @@ void parseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim){
 	lapso.an3 = 0;
 	lapso.an4 = 0;
 
+	lapso.timestamp = mktime(Sascar::ProtocolUtil::ParseDataHora(hsyns.substr(8, 7)));
 
-	cout << "DEBUG -- PROCESSANDO HSYNS "<< dec << ponteiroFim << " ..." << endl;
-
-	lapso.timestamp = mktime( parseDataHora( hsyns.substr( 8, 7 ) ) );
-	//carrega ibutton do motorista em bcd
+	// Load driver ibutton in bcd
 	lapso.ibtMotorista = "";
-	lapso.ibtMotorista += parseBCDDecimal( hsyns.at( 1 ) );
-	//padroniza operacao de codigo vazio 81
-	if( lapso.ibtMotorista == "81" )
+	lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(1));
+
+	// Standardizes the operation code to empty 81
+	if(lapso.ibtMotorista == "81")
 	{
-		//ibutton padrao
+		// Default ibutton
 		lapso.ibtMotorista = "0";
 	}
 	else
 	{
-		lapso.ibtMotorista += parseBCDDecimal( hsyns.at( 2 ) );
-		lapso.ibtMotorista += parseBCDDecimal( hsyns.at( 3 ) );
-		lapso.ibtMotorista += parseBCDDecimal( hsyns.at( 4 ) );
-		lapso.ibtMotorista += parseBCDDecimal( hsyns.at( 5 ) );
-		lapso.ibtMotorista += parseBCDDecimal( hsyns.at( 6 ) );
-		lapso.ibtMotorista += parseBCDDecimal( hsyns.at( 7 ) );
+		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(2));
+		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(3));
+		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(4));
+		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(5));
+		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(6));
+		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(7));
 	}
-	cout << "DEBUG -- PARSE DE TIMESTAMP HEX =  " << dec << hsyns.substr( 8, 7 ) << endl;
-	cout << "DEBUG -- PARSE DE TIMESTAMP =  " << dec << lapso.timestamp << endl;
-	lapso.odometro = parseOdometro( hsyns.substr( 15, 3 ) );
-	cout << "DEBUG -- PARSE DE ODOMETRO =  " << dec << lapso.odometro << endl;
-	cout << hex << setw(2) << setfill('0') << int((unsigned char)hsyns.at(0)) << endl;
-	cout << hex << setw(2) << setfill('0') << int((unsigned char)hsyns.at(hsyns.length()-1)) << endl;
-	lapso.horimetro = parseHorimetro( hsyns.substr( 18, 3 ) );
-	cout << "DEBUG -- PARSE DE HORIMETRO =  " << dec << lapso.horimetro << endl;
 
-	pLapso = persistableLapso( &lapso );
+	Dbg(TAG "Parse timestamp Hex 0x%x", /*dec, */ hsyns.substr(8, 7).c_str());
+	Dbg(TAG "Parse timestamp %d", /*dec, */ lapso.timestamp);
+	lapso.odometro = Sascar::ProtocolUtil::ParseOdometro(hsyns.substr(15, 3));
+
+	Dbg(TAG "Parse odometer %d", /*dec, */ lapso.odometro);
+	Dbg(TAG "%d %d %d %d - %d %d %d %d", /*dec, */ hex, setw(2), setfill('0'), int((unsigned char)hsyns.at(0)), hex, setw(2), setfill('0'), int((unsigned char)hsyns.at(hsyns.length() - 1)));
+	lapso.horimetro = Sascar::ProtocolUtil::ParseHorimetro(hsyns.substr(18, 3));
+
+	Dbg(TAG "Parse horimeter %d", /*dec, */ lapso.horimetro);
+
+	pLapso = Sascar::ProtocolUtil::PersistableLapso(&lapso);
 
 	header.file = arquivo;
 	header.endPointer = ponteiroFim;
 	header.timestamp = lapso.timestamp;
 	header.dataType = bluetec::enumDataType::HSYNS;
-	printf("IMC 1 - header.dataType = %d\n",header.dataType);
-	cout << "DEBUG -- GRAVANDO HSYNS "<<  dec << header.endPointer << " ..." << endl;
-	//salva o inicio de um trecho
-	cout << "DEBUG -- saveBufferFile HEADER DATATYPE " << header.dataType << endl;
-	cout << "DEBUG -- saveBufferFile ENUM   DATATYPE " << dec << bluetec::enumDataType::HSYNS << endl;
 
-	printf("IMC 2 - header.dataType = %d\n",header.dataType);
-	fileManager.saveBufferFile( getVeioid(), pLapso.c_str(), pLapso.length(), header );
+	Dbg(TAG "IMC 1 - header.dataType = %d", header.dataType);
+	Dbg(TAG "Saving HSYNS %d .. ", /*dec,*/ header.endPointer);
 
+	// Save route start
+	Dbg(TAG "Save buffer file Header data type %d", header.dataType);
+	Dbg(TAG "Save buffer file Enum data type %d", /*dec,*/ bluetec::enumDataType::HSYNS);
+
+	Dbg(TAG "IMC 2 - header.dataType = %d", header.dataType);
+	cFileManager.saveBufferFile( getVeioid(), pLapso.c_str(), pLapso.length(), header );
 }
 
 void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 {
-	/*
-	{
-		"_id" : ObjectId("56b389ecb5ce2ba866a499b6"),
-		"id_equipamento" : 0,
-		"veiculo" : 46,
-		"placa" : "OXC-8739",
-		"cliente" : "BT_FROTA",
-		"data_posicao" : ISODate("2015-11-05T08:40:44.000Z"),
-		"data_chegada" : ISODate("2015-11-05T08:40:44.000Z"),
-		"velocidade" : 0,
-		"endereco" : "",
-		"bairro" : "",
-		"municipio" : "",
-		"estado" : "",
-		"numero" : "",
-		"pais" : "",
-		"velocidade_via" : "",
-		"coordenadas" : {
-			"Type" : "Point",
-			"coordinates" : [
-				-49.8847777777778,
-				-60.7441666666667
-			]
-		},
-		"gps" : true,
-		"DadoLivre" : {
-			"Analogico1" : "0",
-			"Analogico2" : "0",
-			"Analogico3" : "0",
-			"Analogico4" : "84",
-			"Digital1" : "0",
-			"Digital2" : "0",
-			"Digital3" : "0",
-			"Digital4" : "84",
-			"Horimetro" : "493.2",
-			"AcelerometroX" : "155",
-			"AcelerometroY" : "148",
-			"Hodometro" : "7603.4",
-			"Rpm" : "1350",
-			"Ignicao" : false
-			"Freio" : false
-		}
-	}
-	*/
-
 	int idEquipment = data.pe().ec().id();
 	int vehicle = data.pe().ec().veioid();
 	std::string plate = "MUR0001";
@@ -694,33 +414,29 @@ void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 					)
 				);
 
-	cout << "------------JSON Begin" << endl;
-	cout << dataPosJSON.toString().c_str() << endl;
-	cout << "------------JSON END" << endl;
+	Log(TAG "%s", dataPosJSON.toString().c_str());
 
 	pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
 }
 
 void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 {
-	fileManager.setPath("/home/murilo/Documents/bluetec/data/");
-
 	bluetec::sBluetecHeaderFile header;
 	char tBuffer[500000];
 	uint32_t tSize=0;
 	bluetec::sHfull hfull;
-	struct sLapso lapso;
+	struct Sascar::ProtocolUtil::sLapso lapso;
 	int tipoDado = 0;
 	int index = 0;
 	int fim = 0;
 	char bufferControle[255];
-	saidas *controle;
+	Sascar::ProtocolUtil::saidas *controle;
 	char bufferExpansao[255];
-	saidas *expansao;
+	Sascar::ProtocolUtil::saidas *expansao;
 	string operacao;
 	int tamLapso = 0;
 	char bufferED[255];
-	saidas *ed;
+	Sascar::ProtocolUtil::saidas *ed;
 
 	int maxSizePacote = 1500;
 	int sizePacote = 0;
@@ -745,7 +461,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	lapso.an4 = 0;
 	cout << "DEBUG -- PROCESSANDO DADOS "<< dec << ponteiroIni << " " << dec << ponteiroFim << " ..." << endl;
 	cout << hex << setw(2) << setfill('0') << int((unsigned char)dados.at(0))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)dados.at(dados.length()-1)) << endl;
-	if( !fileManager.getHfull( getVeioid(), hfull ) )
+	if( !cFileManager.getHfull( getVeioid(), hfull ) )
 	{
 		hfull.lapso = bluetec::enumDefaultValues::LAPSO;
 		hfull.acely = bluetec::enumDefaultValues::ACELY;
@@ -755,7 +471,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 	cout << "DEBUG -- PROCURANDO ALGO ANTES DESSE ARQUIVO..."<< endl;
 	// se existe algo que encaixe no comeco...
-	if( fileManager.getBufferFile( getVeioid(), ponteiroIni-1, arquivo, tBuffer, tSize, header ) &&
+	if( cFileManager.getBufferFile( getVeioid(), ponteiroIni-1, arquivo, tBuffer, tSize, header ) &&
 			header.endPointer == ponteiroIni-1 &&
 			header.file == arquivo){
 
@@ -772,20 +488,20 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			lapsoSetup( tBuffer, lapso );
 			tipoDado = bluetec::enumDataType::HSYNS_DADOS;
 			//apago o lapso temporario...
-			fileManager.delFile( getVeioid(), header.headerFile );
+			cFileManager.delFile( getVeioid(), header.headerFile );
 			break;
 		case bluetec::enumDataType::DADOS:
 			//nesse caso o pedaco de dados encontrado nao significa nada entao sera apenas atualizado...
 			dados = string(tBuffer) + dados;
 			// ...deleto esse arquivo temporario para sobrescreve-lo...
-			fileManager.delFile( getVeioid(), header.headerFile );
+			cFileManager.delFile( getVeioid(), header.headerFile );
 			tipoDado = bluetec::enumDataType::DADOS;
 			break;
 		}
 	}
 	cout << "DEBUG -- PROCURANDO ALGO DEPOIS DESSE ARQUIVO..."<< endl;
 	// se existe algo que encaixe no final...
-	if( fileManager.getBufferFile( getVeioid(), ponteiroFim+1, arquivo, tBuffer, tSize, header ) &&
+	if( cFileManager.getBufferFile( getVeioid(), ponteiroFim+1, arquivo, tBuffer, tSize, header ) &&
 			header.beginPointer == ponteiroFim+1 &&
 			header.file == arquivo){
 
@@ -800,7 +516,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			//nesse caso o pedaco de dados encontrado nao significa nada entao sera apenas atualizado...
 			dados = dados + string(tBuffer);
 			// ...deleto esse arquivo temporario para sobrescreve-lo...
-			fileManager.delFile( getVeioid(), header.headerFile );
+			cFileManager.delFile( getVeioid(), header.headerFile );
 			tipoDado = bluetec::enumDataType::DADOS;
 			break;
 		case bluetec::enumDataType::FINAL:
@@ -809,7 +525,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 				dados = dados + string(tBuffer);
 			}
 			// ...deleto esse arquivo temporario para sobrescreve-lo...
-			fileManager.delFile( getVeioid(), header.headerFile );
+			cFileManager.delFile( getVeioid(), header.headerFile );
 			// ... se tem trecho aberto...
 			if(tipoDado != bluetec::enumDataType::DADOS){
 				tipoDado = bluetec::enumDataType::HSYNS_FINAL;
@@ -830,7 +546,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		header.file = arquivo;
 		header.dataType = tipoDado;
 		cout << "DEBUG -- saveBufferFile HEADER DATATYPE " << dec << header.dataType << endl;
-		fileManager.saveBufferFile( getVeioid(), dados.c_str(), dados.length(), header );
+		cFileManager.saveBufferFile( getVeioid(), dados.c_str(), dados.length(), header );
 	}else if(tipoDado){
 		//se tipoDado nao e bem trecho nao iniciado (DADOS E DADOS_FINAL) entao se ele existir,
 		//significa que tenho um trecho iniciado, entao processo os lapsos
@@ -845,18 +561,18 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 				//calculo o tamanho do byte de controle
 				//cout << "tamanho byte @"<<dec<<index<< " length " << dec << hsyns.length() << " fim " << dec << fim << endl;
-				bufferControle[0] = dados.at( index );
-				controle = (saidas* ) bufferControle;
+				bufferControle[0] = dados.at(index);
+				controle = (Sascar::ProtocolUtil::saidas*) bufferControle;
 
-				tamLapso = tamanhoLapso( controle );
+				tamLapso = Sascar::ProtocolUtil::TamanhoLapso(controle);
 				//e se o bit de expansao estiver ativo, calculo tambem o byte de expansao
-				if( controle->saida0 && index + 1 <= fim )
+				if(controle->saida0 && index + 1 <= fim)
 				{
 					index++; //o byte de expansao vem logo apos o byte de controle, entao ja incremento para calcular corretamente os proximos valores
 					//cout << "tamanho exp @"<<dec<<index<< endl;
-					bufferExpansao[0] = dados.at( index );
-					expansao = (saidas* ) bufferExpansao;
-					tamLapso += ( tamanhoLapsoExpansao( expansao ) + 1 );
+					bufferExpansao[0] = dados.at(index);
+					expansao = (Sascar::ProtocolUtil::saidas*) bufferExpansao;
+					tamLapso += (Sascar::ProtocolUtil::TamanhoLapsoExpansao(expansao) + 1);
 				}
 
 				//cout << ">> tamanho: " << dec << tamLapso << endl;
@@ -901,22 +617,22 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 						lapso.acely = 0;
 					}
 					//ed
-					if( controle->saida1 )
+					if(controle->saida1)
 					{
 						//cout << "------ ed ------ ";
 						index++;
 						//cout << "ed @"<<dec<<index<< endl;
-						bufferED[0] = dados.at( index );
-						ed = (saidas* ) bufferED;
+						bufferED[0] = dados.at(index);
+						ed = (Sascar::ProtocolUtil::saidas*) bufferED;
 
-						lapso.ed1 = (unsigned int ) ed->saida0;
-						lapso.ed2 = (unsigned int ) ed->saida1;
-						lapso.ed3 = (unsigned int ) ed->saida2;
-						lapso.ed4 = (unsigned int ) ed->saida3;
-						lapso.ed5 = (unsigned int ) ed->saida4;
-						lapso.ed6 = (unsigned int ) ed->saida5;
-						lapso.ed7 = (unsigned int ) ed->saida6;
-						lapso.ed8 = (unsigned int ) ed->saida7;
+						lapso.ed1 = (unsigned int) ed->saida0;
+						lapso.ed2 = (unsigned int) ed->saida1;
+						lapso.ed3 = (unsigned int) ed->saida2;
+						lapso.ed4 = (unsigned int) ed->saida3;
+						lapso.ed5 = (unsigned int) ed->saida4;
+						lapso.ed6 = (unsigned int) ed->saida5;
+						lapso.ed7 = (unsigned int) ed->saida6;
+						lapso.ed8 = (unsigned int) ed->saida7;
 						//cout << ((unsigned int)hsyns.at(index)) << endl;
 					}
 					//verifico se ha byte de expansao novamente, dessa vez para processa-lo
@@ -968,12 +684,12 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 								char buffer[255];
 								buffer[0] = controleOper;
-								saidas *p;
-								p = (saidas* ) buffer;
-								double lat = parseLatitude( operacao.substr( 1, 3 ), p->saida2 );
-								double lon = parseLongitude( operacao.substr( 4, 3 ), p->saida1, p->saida0 );
+								Sascar::ProtocolUtil::saidas *p;
+								p = (Sascar::ProtocolUtil::saidas*) buffer;
+								double lat = Sascar::ProtocolUtil::ParseLatitude(operacao.substr( 1, 3 ), p->saida2);
+								double lon = Sascar::ProtocolUtil::ParseLongitude(operacao.substr( 4, 3 ), p->saida1, p->saida0);
 
-								printf( " lat long -> %20.18f %20.18f \n ", lat, lon );
+								printf(" lat long -> %20.18f %20.18f \n ", lat, lon);
 
 								// Setando dados do pacote de posicao
 								posicao = pacote->mutable_ep();
@@ -1079,24 +795,21 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 		//se nao tiver fim de trecho, precisa retornar o ultimo lapso para
 		//persisti-lo e nao haver reprocessamento
-		if( tipoDado != bluetec::enumDataType::HSYNS_FINAL)
+		if(tipoDado != bluetec::enumDataType::HSYNS_FINAL)
 		{
 			header.beginPointer = ponteiroIni;
 			header.endPointer = ponteiroFim;
 			header.file = arquivo;
 			header.idTrecho = lapso.idTrecho;
-			string pLapso = persistableLapso( &lapso );
+			string pLapso = Sascar::ProtocolUtil::PersistableLapso( &lapso );
 			cout << "DEBUG -- saveBufferFile HEADER DATATYPE " << dec << header.dataType << endl;
-			fileManager.saveBufferFile( getVeioid(), pLapso.c_str(), pLapso.length(), header );
+			cFileManager.saveBufferFile( getVeioid(), pLapso.c_str(), pLapso.length(), header );
 		}
-
 	}
-
 }
 
 Protocol::Protocol()
 {
-
 }
 
 Protocol::~Protocol()
@@ -1241,6 +954,8 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, cache
 
 void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbClient)
 {
+	cFileManager.setPath(pConfiguration->GetAppListeningPath());
+
 	if(!pDBClientConnection)
 		pDBClientConnection = dbClient;
 
@@ -1337,7 +1052,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 		//int tipo_dado = bluetec::enumDataType::DADOS;
 		size_t inicio = 0;
 
-		// HEADER OFFSETS:
+		// Header offsets
 		size_t lFimTrecho = 12;
 		size_t lHsync = 21;
 		size_t lHsyns = 21;
@@ -1355,106 +1070,131 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 		{
 			if(sbt4.at(i) == (unsigned char) 0x48)
 			{
-				if(sbt4.compare(i,5,"HSYNC") == 0)
+				if(sbt4.compare(i, 5, "HSYNC") == 0)
 				{
-					cout << "DEBUG --  ACHOU HSYNC em " << dec << i << endl;
+					Dbg(TAG "Found the HSYNC in %d", i);
 					if(inicio < i - lHsync)
 					{
-						cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 6 de " <<dec<< inicio << " a " << i - lHsync - 1 << endl;
-						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i - lHsync - 1)) << endl;
+						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, i - lHsync - 1);
+						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - lHsync - 1)));
+
 						inicio = i - lHsync;
 					}
 					if( inicio == i -  lHsync)
 					{
-						cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 2 de " <<dec<< inicio << " a " << i-1 << endl;
-						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio));
-						cout << " a ";
-						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i-1)) << endl;
+						Dbg(TAG "Creating file of type 2 from %d a %d", inicio, i - 1);
+						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
+
+						// Parse data
 						//parseHSYNC( sbt4.substr( i - 21, 26 ) );
-						i+=5;
-						inicio=i;
+
+						i += 5;
+						inicio = i;
 					}
-					cout << "DEBUG -- inicio " << dec << inicio << " i " << dec << i << endl;
-
-
-				} else if(sbt4.compare(i,5,"HSYNS")==0){
-					cout << "DEBUG --  ACHOU HSYNS em " << dec << i << endl;
+					Dbg(TAG "Start %d i %d", /*dec,*/ inicio, /*dec,*/ i);
+				}
+				else if(sbt4.compare(i,5,"HSYNS") == 0)
+				{
+					Dbg(TAG "Found the HSYNS in %d", i);
 					if( inicio < i - lHsyns )
 					{
-						cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 6 de " <<dec<< inicio << " a " << i - lHsyns - 1 << endl;
-						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i - lHsyns - 1)) << endl;
+						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, lHsyns - 1);
+						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - lHsyns - 1)));
+
+						// Parse data
 						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo);
 						inicio = i - lHsyns;
 					}
 					if( inicio == i -  lHsyns)
 					{
-						cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 3 de " <<dec<< inicio << " a " << i-1 << endl;
-						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i-1)) << endl;
+						Dbg(TAG "Creating file of type 3 from %d a %d", inicio, lHfull - 1);
+						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
 
-						//i esta em 'H', entao conta mais 4 ponteiros a frente, ou seja, 'H' + 'SYNS'
-						cout << "DEBUG -- PARAMS HSYNS " << dec << inicio << " " << dec << arquivo << " " << dec << ponteiroIni << "+" << i << "+4" <<endl;
-						parseHSYNS( sbt4.substr( inicio, lHsyns ), arquivo, ponteiroIni +i+4);
-						i+=5;
-						inicio=i;
+						// i is in 'H', count plus 4 pointers ahead, 'H' + 'SYNS'
+						Dbg(TAG "Params HSYNS %d %d %d + %d + 4", /*dec,*/ inicio, /*dec,*/ arquivo, /*dec, */ ponteiroIni, i);
+
+						// Parse data
+						ParseHSYNS( sbt4.substr( inicio, lHsyns ), arquivo, ponteiroIni +i+4);
+
+						i += 5;
+						inicio = i;
 					}
-					cout << "DEBUG -- inicio " << dec << inicio << " i " << dec << i << endl;
-
-
-				} else if(sbt4.compare(i,5,"HFULL")==0){
-
-					cout << "DEBUG --  ACHOU HFULL em " << dec << i << endl;
+					Dbg(TAG "Start %d i %d", /*dec,*/ inicio, /*dec,*/ i);
+				}
+				else if(sbt4.compare(i, 5, "HFULL") == 0)
+				{
+					Dbg(TAG "Found the HFULL in %d", i);
 					if( inicio < i - lHfull )
 					{
+						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, lHfull - 1);
+						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
 
-						cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 6 de " <<dec<< inicio << " a " << i - lHfull - 1 << endl;
-						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i - lHfull - 1)) << endl;
+						// Parse data
 						ParseData(sbt4.substr(inicio, i - inicio - lHfull), ponteiroIni + inicio, ponteiroIni + i-lHfull - 1, arquivo);
 						inicio = i - lHfull;
 					}
+
 					if( inicio == i -  lHfull)
 					{
-						cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 1 de " <<dec<< inicio << " a " << i-1 << endl;
-						cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i-1)) << endl;
-						parseHFULL( sbt4.substr( inicio, i-inicio ), ponteiroIni+inicio, i+4, arquivo);
+						Dbg(TAG "Creating file of type 1 from %d a %d", inicio, i - 1);
 
-						i+=5;
-						inicio=i;
+						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
+
+						// Parse data
+						ParseHFULL( sbt4.substr( inicio, i-inicio ), ponteiroIni+inicio, i+4, arquivo);
+
+						i += 5;
+						inicio = i;
 					}
-					cout << "DEBUG -- inicio " << dec << inicio << " i " << dec << i << endl;
-
+					Dbg(TAG "Start %d i %d", /*dec,*/ inicio, /*dec,*/ i);
 				}
-
 			}
 			else if(i+4 < sbt4.length() &&
 					sbt4.at(i) == (unsigned char) 0x82 &&
-					sbt4.compare(i,4,fimTrecho)==0)
+					sbt4.compare(i,4,fimTrecho) == 0)
 			{
-				cout << "DEBUG --  ACHOU FIM DE TRECHO EM " << dec << i << endl;
+				Dbg(TAG "Found the end of route in %d", i);
 				if(inicio < i)
 				{
-					cout << "DEBUG -- MONTANDO ARQUIVO DO TIPO 6 de " <<dec<< inicio << " a " << i-1 << endl;
-					cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(i - 1)) << endl;
+					Dbg(TAG "Creating file of type 6 from %d a %d", inicio, i - 1);
+
+					Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+						hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
+
+					// Parse data
 					ParseData(sbt4.substr(inicio, i - inicio), ponteiroIni + inicio, ponteiroIni + i-1, arquivo);
 					inicio = i;
 				}
 				if( inicio == i && i + lFimTrecho <= sbt4.length())
 				{
-					cout << "DEBUG -- FECHANDO TRECHO DE PONTEIRO FINAL " <<dec<< i-1 << endl;
-					parseA3A5A7(ponteiroIni + i, arquivo);
-					i+=lFimTrecho+1;
-					inicio=i;
+					Dbg(TAG "Closing the route of final point %d", /*dec,*/ i - 1);
+
+					// Parse data
+					ParseA3A5A7(ponteiroIni + i, arquivo);
+
+					i += lFimTrecho + 1;
+					inicio = i;
 				}
-				cout << "DEBUG -- inicio " << dec << inicio << " i " << dec << i << endl;
+				Dbg(TAG "Start %d i %d", /*dec,*/ inicio, /*dec,*/ i);
 			}
 		}
 
-		if(inicio < sbt4.length()) {
-			cout << "DEBUG -- ENVIANDO TIPO 6 NO FIM DO BUFFER " <<dec<< inicio << " a " << sbt4.length()-1 << endl;
-			cout << hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(inicio))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)sbt4.at(sbt4.length()-1)) << endl;
+		if(inicio < sbt4.length())
+		{
+			Dbg(TAG "Sending type 6 at the end of buffer %d a %d", /*dec,*/ inicio, sbt4.length() - 1);
+			Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio))
+				, hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(sbt4.length()-1)));
+
+			// Parse data
 			ParseData(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo);
 		}
-
-		fclose( in );
+		fclose(in);
 	}
 
 }

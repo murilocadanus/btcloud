@@ -7,7 +7,8 @@ SOURCES +=	source/main.cpp \
 			source/BTCloudApp.cpp \
 			source/entities/pacote_posicao.pb.cc \
 			source/entities/bluetec400.pb.cc \
-			source/clock.cpp
+			source/clock.cpp \
+    source/util/ProtocolUtil.cpp
 
 HEADERS +=	\
 			include/IFile.h \
@@ -20,9 +21,13 @@ HEADERS +=	\
 			include/BTCloudApp.hpp \
 			include/entities/pacote_posicao.pb.h \
 			include/entities/bluetec400.pb.h \
-			include/clock.h
+			include/clock.h \
+    include/util/ProtocolUtil.hpp
 
 OTHER_FILES += resources/app.config \
 
 include("app.pri")
 include("compiler.pri")
+
+DISTFILES += \
+    resources/Model.json

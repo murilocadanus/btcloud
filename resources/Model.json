@@ -1,0 +1,42 @@
+{
+    "_id" : ObjectId("56b389ecb5ce2ba866a499b6"),
+    "id_equipamento" : 0,
+    "veiculo" : 46,
+    "placa" : "OXC-8739",
+    "cliente" : "BT_FROTA",
+    "data_posicao" : ISODate("2015-11-05T08:40:44.000Z"),
+    "data_chegada" : ISODate("2015-11-05T08:40:44.000Z"),
+    "velocidade" : 0,
+    "endereco" : "",
+    "bairro" : "",
+    "municipio" : "",
+    "estado" : "",
+    "numero" : "",
+    "pais" : "",
+    "velocidade_via" : "",
+    "coordenadas" : {
+        "Type" : "Point",
+        "coordinates" : [
+            -49.8847777777778,
+            -60.7441666666667
+        ]
+    },
+    "gps" : true,
+    "DadoLivre" : {
+        "Analogico1" : "0",
+        "Analogico2" : "0",
+        "Analogico3" : "0",
+        "Analogico4" : "84",
+        "Digital1" : "0",
+        "Digital2" : "0",
+        "Digital3" : "0",
+        "Digital4" : "84",
+        "Horimetro" : "493.2",
+        "AcelerometroX" : "155",
+        "AcelerometroY" : "148",
+        "Hodometro" : "7603.4",
+        "Rpm" : "1350",
+        "Ignicao" : false,
+        "Freio" : false
+    }
+}
