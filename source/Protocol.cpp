@@ -35,84 +35,6 @@ cache_cadastro cad;
 pacote_posicao::t32_odo_vel *odo_vel_gps;
 
 
-
-void lapsoToTelemetria(pacote_posicao::t_telemetria_bluetec400 *tele, struct Sascar::ProtocolUtil::sLapso& lapso)
-{
-	tele->set_trecho( lapso.idTrecho );
-	tele->set_datahora( lapso.timestamp );
-	tele->set_velocidade( lapso.velocidade );
-	tele->set_rpm( lapso.rpm );
-	tele->set_odometro( lapso.odometro );
-	tele->set_horimetro( lapso.horimetro );
-	tele->set_ed1( lapso.ed1 );
-	tele->set_ed2( lapso.ed2 );
-	tele->set_ed3( lapso.ed3 );
-	tele->set_ed4( lapso.ed4 );
-	tele->set_ed5( lapso.ed5 );
-	tele->set_ed6( lapso.ed6 );
-	tele->set_ed7( lapso.ed7 );
-	tele->set_ed8( lapso.ed8 );
-	tele->set_acelx( lapso.acelx );
-	tele->set_acely( lapso.acely );
-	tele->set_an1( lapso.an1 );
-	tele->set_an2( lapso.an2 );
-	tele->set_an3( lapso.an3 );
-	tele->set_an4( lapso.an4 );
-	tele->set_operacao( lapso.operacao );
-}
-
-void lapsoSetup(string lapso, struct Sascar::ProtocolUtil::sLapso& setup)
-{
-	if( lapso.length() == 0 )
-		return;
-	size_t index = 0;
-	//cout << "1 ... " << dec <<lapso.find("##", index) << endl;
-	//cout << "'"<<lapso.substr(index, lapso.find("##", index)) << "'"<< endl;
-	//cout << "'"<<lapso.substr(index, lapso.find("##", index)).length() << "'"<< endl;
-	setup.velocidade = stoi( lapso.substr( index, lapso.find( "##", index ) ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "2 ... ";
-	setup.rpm = stoi( lapso.substr( index, lapso.find( "##", index ) ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "3 ... ";
-	setup.acelx = stoi( lapso.substr( index, lapso.find( "##", index ) ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "4 ... ";
-	setup.acely = stoi( lapso.substr( index, lapso.find( "##", index ) ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "5 ... ";
-	setup.ed1 = (int ) ( lapso.at( index ) );
-	setup.ed2 = (int ) ( lapso.at( index++ ) );
-	setup.ed3 = (int ) ( lapso.at( index++ ) );
-	setup.ed4 = (int ) ( lapso.at( index++ ) );
-	setup.ed5 = (int ) ( lapso.at( index++ ) );
-	setup.ed6 = (int ) ( lapso.at( index++ ) );
-	setup.ed7 = (int ) ( lapso.at( index++ ) );
-	setup.ed8 = (int ) ( lapso.at( index++ ) );
-	//	cout << "6 ... ";
-	setup.an1 = stoi( lapso.substr( index, lapso.find( "##", index ) - 1 ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "7 ... ";
-	setup.an2 = stoi( lapso.substr( index, lapso.find( "##", index ) - 1 ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "8 ... ";
-	setup.an3 = stoi( lapso.substr( index, lapso.find( "##", index ) - 1 ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "9 ... ";
-	setup.an4 = stoi( lapso.substr( index, lapso.find( "##", index ) - 1 ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "10 ... ";
-	setup.odometro = stol( lapso.substr( index, lapso.find( "##", index ) - 1 ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "11 ... ";
-	setup.horimetro = stol( lapso.substr( index, lapso.find( "##", index ) - 1 ) );
-	index = lapso.find( "##", index ) + 2;
-	//cout << "12 ... ";
-	setup.ibtMotorista = lapso.substr( index, lapso.find( "##", index ) - 1 );
-	index = lapso.find( "##", index ) + 2;
-	//cout << " OK! " << endl;
-}
-
 uint32_t getVeioid()
 {
 	return cad.veioid;
@@ -138,8 +60,6 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	hfull.lapso += p->saida2 * 4;
 	hfull.lapso += p->saida3 * 8;
 	hfull.lapso += p->saida4 * 16;
-	//cout << " lapso: " << dec << (int)hfull.lapso << " segundos"<< endl;
-
 	//hfull.idVeiculo = strHfull.substr(1, 8);
 	//hfull.versaoFirmware = strHfull.substr(9, 2);
 	//hfull.versaoHardware = (unsigned int)strHfull.at(12);
@@ -158,10 +78,10 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	hfull.spanAcel = (unsigned int ) strHfull.at( 42 );
 	//hfull.reservado3[3];
 	//hfull.verConsistenciaSetup;
-	//hfull.confHardwareRe; //Configuracoes de Hardware (Redundancia)
+	//hfull.confHardwareRe; //Hardware config (Redundancy)
 	//hfull.limiteAnalogico1;
 	//hfull.limiteAnalogico234[3];
-	//hfull.lapsosGravacaoEvento; //Lapsos de gravacao do evento
+	//hfull.lapsosGravacaoEvento; //Event lapses
 	///hfull.reservado4[8];
 	//hfull.volume;
 	//hfull.parametrosGPS;
@@ -356,15 +276,15 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	Dbg(TAG "Save buffer file Enum data type %d", /*dec,*/ bluetec::enumDataType::HSYNS);
 
 	Dbg(TAG "IMC 2 - header.dataType = %d", header.dataType);
-	cFileManager.saveBufferFile( getVeioid(), pLapso.c_str(), pLapso.length(), header );
+	cFileManager.saveBufferFile(getVeioid(), pLapso.c_str(), pLapso.length(), header);
 }
 
 void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 {
-	int idEquipment = data.pe().ec().id();
-	int vehicle = data.pe().ec().veioid();
-	std::string plate = "MUR0001";
-	std::string client = "BT_FROTA";
+	int idEquipment = cad.id;
+	int vehicle = cad.veioid;
+	std::string plate = cad.placa;
+	std::string client = cad.clientName;
 
 	u_int64_t datePosition = data.pe().ep().datahora(); // "2015-11-05T08:40:44.000Z"
 	datePosition *= 1000;
@@ -416,7 +336,7 @@ void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 
 	Log(TAG "%s", dataPosJSON.toString().c_str());
 
-	pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
+	//pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
 }
 
 void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
@@ -459,9 +379,11 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	lapso.an2 = 0;
 	lapso.an3 = 0;
 	lapso.an4 = 0;
-	cout << "DEBUG -- PROCESSANDO DADOS "<< dec << ponteiroIni << " " << dec << ponteiroFim << " ..." << endl;
-	cout << hex << setw(2) << setfill('0') << int((unsigned char)dados.at(0))<< " a "<< hex << setw(2) << setfill('0') << int((unsigned char)dados.at(dados.length()-1)) << endl;
-	if( !cFileManager.getHfull( getVeioid(), hfull ) )
+
+	Dbg(TAG "Processing data %d %d...", ponteiroIni, ponteiroFim);
+	Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)dados.at(0)), hex, setw(2), setfill('0'), int((unsigned char)dados.at(dados.length()-1)));
+
+	if(!cFileManager.getHfull(getVeioid(), hfull))
 	{
 		hfull.lapso = bluetec::enumDefaultValues::LAPSO;
 		hfull.acely = bluetec::enumDefaultValues::ACELY;
@@ -469,159 +391,155 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		hfull.spanAcel = bluetec::enumDefaultValues::SPANACEL;
 	}
 
-	cout << "DEBUG -- PROCURANDO ALGO ANTES DESSE ARQUIVO..."<< endl;
-	// se existe algo que encaixe no comeco...
-	if( cFileManager.getBufferFile( getVeioid(), ponteiroIni-1, arquivo, tBuffer, tSize, header ) &&
-			header.endPointer == ponteiroIni-1 &&
-			header.file == arquivo){
+	Dbg(TAG "Searching data before this file...");
 
-		cout << "DEBUG -- ENCONTRADO COM TIPO "<< dec << header.dataType <<" ..."<< endl;
-		printf("IMC 3 - header.dataType = %d\n",header.dataType);
-		cout << "DEBUG -- ENCONTRADO COM PONTEIRO FIM "<< dec << header.endPointer <<"..."<< endl;
-		// TEMP + DADOS
+	// Case some data exists
+	if(cFileManager.getBufferFile(getVeioid(), ponteiroIni-1, arquivo, tBuffer, tSize, header) &&
+			header.endPointer == ponteiroIni-1 && header.file == arquivo)
+	{
+		Dbg(TAG "Found with type %d", header.dataType);
+		Dbg(TAG "IMC 3 - header.dataType = %d", header.dataType);
+		Dbg(TAG "Found with end point %d", header.endPointer);
+
+		// Temp + data
 		ponteiroIni = header.beginPointer;
 		lapso.timestamp = header.timestamp;
-		switch (header.dataType){
-		case bluetec::enumDataType::HSYNS_DADOS:
-		case bluetec::enumDataType::HSYNS:
-			//nesse caso o trecho ja foi iniciado entao o primeiro lapso deve ser restaurado
-			lapsoSetup( tBuffer, lapso );
-			tipoDado = bluetec::enumDataType::HSYNS_DADOS;
-			//apago o lapso temporario...
-			cFileManager.delFile( getVeioid(), header.headerFile );
+		switch(header.dataType)
+		{
+			case bluetec::enumDataType::HSYNS_DADOS:
+
+			case bluetec::enumDataType::HSYNS:
+				// This route was already started then the first lapse must be restored
+				Sascar::ProtocolUtil::LapsoSetup(tBuffer, lapso);
+				tipoDado = bluetec::enumDataType::HSYNS_DADOS;
+
+				// Clean the temporary lapse
+				cFileManager.delFile(getVeioid(), header.headerFile);
 			break;
-		case bluetec::enumDataType::DADOS:
-			//nesse caso o pedaco de dados encontrado nao significa nada entao sera apenas atualizado...
-			dados = string(tBuffer) + dados;
-			// ...deleto esse arquivo temporario para sobrescreve-lo...
-			cFileManager.delFile( getVeioid(), header.headerFile );
-			tipoDado = bluetec::enumDataType::DADOS;
+
+			case bluetec::enumDataType::DADOS:
+				// This case of data shard found does not have a meaning, it will be updated
+				dados = string(tBuffer) + dados;
+
+				// Clean file temporarily to overwrite it
+				cFileManager.delFile( getVeioid(), header.headerFile );
+				tipoDado = bluetec::enumDataType::DADOS;
 			break;
 		}
 	}
-	cout << "DEBUG -- PROCURANDO ALGO DEPOIS DESSE ARQUIVO..."<< endl;
-	// se existe algo que encaixe no final...
-	if( cFileManager.getBufferFile( getVeioid(), ponteiroFim+1, arquivo, tBuffer, tSize, header ) &&
-			header.beginPointer == ponteiroFim+1 &&
-			header.file == arquivo){
 
-		// DADOS + TEMP
+	Dbg(TAG "Searching data after this file...");
+
+	// Case some data exists
+	if(cFileManager.getBufferFile(getVeioid(), ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
+			header.beginPointer == ponteiroFim + 1 &&	header.file == arquivo)
+	{
+		// Data + Temp
 		ponteiroFim = header.endPointer;
 
-		cout << "DEBUG -- ENCONTRADO COM TIPO "<< dec << header.dataType <<"..."<< endl;
-		cout << "DEBUG -- ENCONTRADO COM PONTEIRO FIM "<< dec << header.endPointer <<"..."<< endl;
+		Dbg(TAG "Found with type %d", header.dataType);
+		Dbg(TAG "Found with end point %d", header.endPointer);
+
 		lapso.timestamp = header.timestamp;
-		switch (header.dataType){
-		case bluetec::enumDataType::DADOS:
-			//nesse caso o pedaco de dados encontrado nao significa nada entao sera apenas atualizado...
-			dados = dados + string(tBuffer);
-			// ...deleto esse arquivo temporario para sobrescreve-lo...
-			cFileManager.delFile( getVeioid(), header.headerFile );
-			tipoDado = bluetec::enumDataType::DADOS;
-			break;
-		case bluetec::enumDataType::FINAL:
-		case bluetec::enumDataType::DADOS_FINAL:
-			if(header.dataType == bluetec::enumDataType::DADOS_FINAL){
+
+		switch(header.dataType)
+		{
+			case bluetec::enumDataType::DADOS:
+				// This case of data shard found does not have a meaning, it will be updated
 				dados = dados + string(tBuffer);
-			}
-			// ...deleto esse arquivo temporario para sobrescreve-lo...
-			cFileManager.delFile( getVeioid(), header.headerFile );
-			// ... se tem trecho aberto...
-			if(tipoDado != bluetec::enumDataType::DADOS){
-				tipoDado = bluetec::enumDataType::HSYNS_FINAL;
-			}else{
-				tipoDado = bluetec::enumDataType::DADOS_FINAL;
-			}
+
+				// Clean file temporarily to overwrite it
+				cFileManager.delFile(getVeioid(), header.headerFile);
+				tipoDado = bluetec::enumDataType::DADOS;
+			break;
+
+			case bluetec::enumDataType::FINAL:
+
+			case bluetec::enumDataType::DADOS_FINAL:
+				if(header.dataType == bluetec::enumDataType::DADOS_FINAL)
+					dados = dados + string(tBuffer);
+
+				// Clean file temporarily to overwrite it
+				cFileManager.delFile( getVeioid(), header.headerFile );
+
+				// Verify if has an opened route
+				if(tipoDado != bluetec::enumDataType::DADOS)
+					tipoDado = bluetec::enumDataType::HSYNS_FINAL;
+				else
+					tipoDado = bluetec::enumDataType::DADOS_FINAL;
 			break;
 		}
-
 	}
 
-	cout << "DEBUG -- VALIDANDO TRECHO TIPODADO "<<dec << tipoDado << " ..."<< endl;
-	if(tipoDado == bluetec::enumDataType::DADOS_FINAL ||
-			tipoDado == bluetec::enumDataType::DADOS){
-		cout << "DEBUG -- TRECHO AINDA DESCONHECIDO..."<< endl;
+	Dbg(TAG "Verifying route data type %d...", tipoDado);
+	if(tipoDado == bluetec::enumDataType::DADOS_FINAL || tipoDado == bluetec::enumDataType::DADOS)
+	{
+		Dbg(TAG "Unknown route");
+
 		header.beginPointer = ponteiroIni;
 		header.endPointer = ponteiroFim;
 		header.file = arquivo;
 		header.dataType = tipoDado;
-		cout << "DEBUG -- saveBufferFile HEADER DATATYPE " << dec << header.dataType << endl;
-		cFileManager.saveBufferFile( getVeioid(), dados.c_str(), dados.length(), header );
-	}else if(tipoDado){
-		//se tipoDado nao e bem trecho nao iniciado (DADOS E DADOS_FINAL) entao se ele existir,
-		//significa que tenho um trecho iniciado, entao processo os lapsos
-		cout << "DEBUG -- TRECHO CONHECIDO, INCIANDO PROCESSAMENTO..."<< endl;
-		fim = dados.length();
-		while(index < fim )
-		{
 
+		Dbg(TAG "Save buffer file header data type %d", header.dataType);
+		cFileManager.saveBufferFile(getVeioid(), dados.c_str(), dados.length(), header);
+	}
+	else if(tipoDado)
+	{
+		// When a route is known, so it exists and it can be processed
+		Dbg(TAG "Known route, processing...");
+		fim = dados.length();
+		while(index < fim)
+		{
 			try
 			{
-				//cout << "       " << index << " 	" << fim << " tipo_dado " << dec << tipo_dado<< endl;
-
-				//calculo o tamanho do byte de controle
-				//cout << "tamanho byte @"<<dec<<index<< " length " << dec << hsyns.length() << " fim " << dec << fim << endl;
+				// Calc control byte size
 				bufferControle[0] = dados.at(index);
 				controle = (Sascar::ProtocolUtil::saidas*) bufferControle;
-
 				tamLapso = Sascar::ProtocolUtil::TamanhoLapso(controle);
-				//e se o bit de expansao estiver ativo, calculo tambem o byte de expansao
+
+				// Case the expasion bit is enable, calc the expasion byte
 				if(controle->saida0 && index + 1 <= fim)
 				{
-					index++; //o byte de expansao vem logo apos o byte de controle, entao ja incremento para calcular corretamente os proximos valores
-					//cout << "tamanho exp @"<<dec<<index<< endl;
+					// The expasion byte comes after control byte, so increment it to calculate correctly next data
+					index++;
+
 					bufferExpansao[0] = dados.at(index);
 					expansao = (Sascar::ProtocolUtil::saidas*) bufferExpansao;
 					tamLapso += (Sascar::ProtocolUtil::TamanhoLapsoExpansao(expansao) + 1);
 				}
 
-				//cout << ">> tamanho: " << dec << tamLapso << endl;
-				//cout << ">>   index: " << dec << index << endl;
-				//cout << ">>     fim: " << dec << fim << endl;
-				//verifico se esse lapso esta completo nesse pedaco de trecho
-				if( index + tamLapso <= fim )
+				// Validate route lapse at this point
+				if(index + tamLapso <= fim)
 				{
-					//velocidade
-					if( controle->saida5 )
+					// Speed
+					if(controle->saida5)
 					{
-						//printf("------ velocidade -------");
 						index++;
-						//cout << "velocidade @"<<dec<<index<< endl;
-						lapso.velocidade = ( (double ) ( (unsigned char ) dados.at( index ) ) );
-						//cout << dec << velocidade << endl;
+						lapso.velocidade = ((double) ((unsigned char) dados.at(index)));
 					}
-					//rpm
-					if( controle->saida4 )
+					// Rpm
+					if(controle->saida4)
 					{
-						//cout << "------ rpm ------ ";
 						index++;
-						//cout << "rpm @"<<dec<<index<< " "<< hex << setw(2) << setfill('0') << int((unsigned char)hsyns.at(index)) << endl;
-						lapso.rpm = ( (int ) ( (unsigned char ) dados.at( index ) ) ) * 50;
-						//cout << dec << lapso.rpm<< endl;
+						lapso.rpm = ((int) ((unsigned char) dados.at(index))) * 50;
 					}
-					//acel x
-					if( controle->saida3 )
+					// Acel x
+					if(controle->saida3)
 					{
-						//cout << "------ acelx ------ ";
 						index++;
-						//cout << "acelx @"<<dec<<index<<endl;
 						lapso.acelx = 0;
 					}
-					//acel y
-					if( controle->saida2 )
+					// Acel y
+					if(controle->saida2)
 					{
-						//cout << "------ acely ------ ";
 						index++;
-						//cout << dec <<((unsigned int)hsyns.at(index)) << endl;
-						//cout << "acely @"<<dec<<index<< " "<< hex << setw(2) << setfill('0') << int((unsigned char)hsyns.at(index)) << endl;
 						lapso.acely = 0;
 					}
-					//ed
+					// Ed
 					if(controle->saida1)
 					{
-						//cout << "------ ed ------ ";
 						index++;
-						//cout << "ed @"<<dec<<index<< endl;
 						bufferED[0] = dados.at(index);
 						ed = (Sascar::ProtocolUtil::saidas*) bufferED;
 
@@ -633,177 +551,172 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 						lapso.ed6 = (unsigned int) ed->saida5;
 						lapso.ed7 = (unsigned int) ed->saida6;
 						lapso.ed8 = (unsigned int) ed->saida7;
-						//cout << ((unsigned int)hsyns.at(index)) << endl;
 					}
-					//verifico se ha byte de expansao novamente, dessa vez para processa-lo
-					if( controle->saida0 )
+
+					// Verify if exists a expasion byte, this time to process it
+					if(controle->saida0)
 					{
-						//cout << "------ expansao ------" << endl;
-						//TODO: CALCULAR AS INFORMACOES DO BYTE DE EXPANSAO
-						//an 1
-						if( expansao->saida7 )
+						Dbg(TAG "Expansion");
+
+						// An 1
+						if(expansao->saida7)
 						{
-							//cout << "------ an1 ------" << endl;
+							Dbg(TAG "An 1");
 							lapso.an1 = 0;
 							index += 2;
 						}
-						//an 2
-						if( expansao->saida6 )
+						// An 2
+						if(expansao->saida6)
 						{
-							//cout << "------ an2 ------" << endl;
+							Dbg(TAG "An 2");
 							lapso.an2 = 0;
 							index++;
 						}
-						//an 3
-						if( expansao->saida5 )
+						// An 3
+						if(expansao->saida5)
 						{
-							//cout << "------ an3 ------" << endl;
+							Dbg(TAG "An 3");
 							lapso.an3 = 0;
 							index++;
 						}
-						//an 4
-						if( expansao->saida4 )
+						// An 4
+						if(expansao->saida4)
 						{
-							//cout << "------ an4 ------" << endl;
+							Dbg(TAG "An 4");
 							lapso.an4 = 0;
 							index++;
 						}
-						//verifico se existe informacao de operacao
-						if( expansao->saida3 )
+						// Verify if there is a operation information
+						if(expansao->saida3)
 						{
-							operacao = dados.substr( index + 1, 7 );
+							operacao = dados.substr(index + 1, 7);
 							lapso.operacao = operacao;
-							//cout << "controle oper @"<<dec<<0<< endl;
-							unsigned char controleOper = operacao.at( 0 );
-							//cout << "------ operacao  "<< asctime (gmtime ( &lapso.timestamp )) << " ------ " << hex << setw(2) << setfill('0') << int(controleOper) << " - " << hex << setw(2) << setfill('0') << int((unsigned char)operacao.at(operacao.length()-1)) << endl;
+							unsigned char controleOper = operacao.at(0);
 							index += 7;
-							//agora preciso ver se essa informacao e de gps
-							if( controleOper >= 0xA0 )
+
+							// Verify if is a GPS
+							if(controleOper >= 0xA0)
 							{
-								cout << "------ gps ------";
+								Dbg(TAG "GPS");
 
 								char buffer[255];
 								buffer[0] = controleOper;
 								Sascar::ProtocolUtil::saidas *p;
 								p = (Sascar::ProtocolUtil::saidas*) buffer;
-								double lat = Sascar::ProtocolUtil::ParseLatitude(operacao.substr( 1, 3 ), p->saida2);
-								double lon = Sascar::ProtocolUtil::ParseLongitude(operacao.substr( 4, 3 ), p->saida1, p->saida0);
+								double lat = Sascar::ProtocolUtil::ParseLatitude(operacao.substr(1, 3), p->saida2);
+								double lon = Sascar::ProtocolUtil::ParseLongitude(operacao.substr(4, 3), p->saida1, p->saida0);
 
-								printf(" lat long -> %20.18f %20.18f \n ", lat, lon);
+								Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
-								// Setando dados do pacote de posicao
+								// Setting data to position package
 								posicao = pacote->mutable_ep();
-								posicao->set_lat2( lat );
-								posicao->set_long2( lon );
-								posicao->set_datahora( lapso.timestamp );
+								posicao->set_lat2(lat);
+								posicao->set_long2(lon);
+								posicao->set_datahora(lapso.timestamp);
 								//	posicao->set_datachegada(lapso.timestamp);
 								posicao->set_datachegada(clock::horaatual);
-								//	printf(" Dada Chegada -> %s\n", clock::horaatual);
 
 								eventoflag = posicao->mutable_eventoflag();
-								if( lapso.rpm > 0 && lapso.velocidade > 0 )
-								{
-									eventoflag->set_ignicao( 1 );
-								}
+
+								if(lapso.rpm > 0 && lapso.velocidade > 0)
+									eventoflag->set_ignicao(1);
 								else
-								{
-									eventoflag->set_ignicao( 0 );
-								}
+									eventoflag->set_ignicao(0);
 
 								odo_vel_gps = posicao->mutable_odo_vel_gps();
-								odo_vel_gps->set_velocidade( lapso.velocidade );
-								printf( " timestamp antes de transmitir... %d \n ", lapso.timestamp );
+								odo_vel_gps->set_velocidade(lapso.velocidade);
 
-								cout << " posicionamento encontrado, enviando pacote com " << dec << sizePacote / lapsoSize << " lapsos de " << dec << lapsoSize << " bytes" << endl;
+								Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
+								Dbg(TAG "Position found, sending package with %d lapses of %d bytes",
+									sizePacote / lapsoSize, lapsoSize);
 
-								//Envia para a fila o pacote de posicao ja em sem formato final protobuf.
+								// Send position package to queue in final protobuf format
 								bluetecPacote.SerializeToString(&serializado);
+
+								// Save JSON at MongoDB
 								PersistJSONData(bluetecPacote);
+
 								bluetecPacote.Clear();
-								//bluetecPacote.clear_tb();
-								//reinicia o tamanho maximo do pacote pois ja enviou
+								bluetecPacote.clear_tb();
+
+								// Reset maximum size of packet
 								sizePacote = 0;
 							}
-
 						}
-						//incremento odometro
-						if( expansao->saida2 )
+
+						// Increase odometer
+						if(expansao->saida2)
 						{
 							//cout << "ODOMETRO INCREMENTADO " << dec << lapso.odometro << " + 100 = ";
 							lapso.odometro += 100;
 							//cout <<dec<< lapso.odometro<< endl;
 						}
-						//incremento horimetro
-						if( expansao->saida1 )
+
+						// Increase horimeter
+						if(expansao->saida1)
 						{
 							lapso.horimetro += 6;
 						}
-						//vago
-						if( expansao->saida0 )
+
+						// Empty
+						if(expansao->saida0)
 						{
-
 						}
-
 					}
 
-					//popula o protobuf com as variaveis de lapso
-
-					//coloca esse novo protobuf na lista
-
+					// Set protobuf vars with lapse values
 					index++;
-					//cria um novo pacote
 
-					//verifica se esse novo pacote vai estourar o tamamho maximo
+					// Validates package size
 					sizePacote += lapsoSize;
-					if( sizePacote > maxSizePacote )
+
+					if(sizePacote > maxSizePacote)
 					{
-						cout << " tamanho maximo atingido, enviando pacote com " << dec << sizePacote / lapsoSize << " lapsos de " << dec << lapsoSize << " bytes" << endl;
-						//se estourar ja envia antes
-						bluetecPacote.SerializeToString( &serializado );
+						Dbg(TAG "Maximum size reahed, sending package with %d lapses with %d bytes", sizePacote / lapsoSize, lapsoSize);
+						// Send case overlaps the size
+						bluetecPacote.SerializeToString(&serializado);
+
+						// Save data at MongoDB
 						PersistJSONData(bluetecPacote);
 						bluetecPacote.clear_tb();
-						//reinicia o valor do tamanho do pacote com o tamanho do lapso que nao foi enviado
+
+						// Reset the value of package with the size of lapse
 						sizePacote = lapsoSize;
 					}
 					else
 					{
 						telemetria = bluetecPacote.add_tb();
-						lapsoToTelemetria(telemetria, lapso);
+						Sascar::ProtocolUtil::LapsoToTelemetria(telemetria, lapso);
 					}
-
-					//cout << " INCREMENTO DE TIMESTAMP " << dec << lapso.timestamp << " += "<< dec << hfull.lapso << " = ";
 					lapso.timestamp += hfull.lapso;
-					//cout << dec << lapso.timestamp << endl;
-
 				}
 				else
 				{
 					index = fim;
 				}
-
 			}
-			catch(exception& e )
+			catch(exception& e)
 			{
-				cout << "ERRO indice: " << index << endl;
+				Error(TAG "Index error %d", index);
 			}
-
-		} //end while
+		}
 
 		bluetecPacote.SerializeToString(&serializado);
 		PersistJSONData(bluetecPacote);
 		bluetecPacote.clear_tb();
 
-		//se nao tiver fim de trecho, precisa retornar o ultimo lapso para
-		//persisti-lo e nao haver reprocessamento
+		// Case do not exist a end of route, the last lapse must be returned
+		// to persist and to not reprocess
 		if(tipoDado != bluetec::enumDataType::HSYNS_FINAL)
 		{
 			header.beginPointer = ponteiroIni;
 			header.endPointer = ponteiroFim;
 			header.file = arquivo;
 			header.idTrecho = lapso.idTrecho;
-			string pLapso = Sascar::ProtocolUtil::PersistableLapso( &lapso );
-			cout << "DEBUG -- saveBufferFile HEADER DATATYPE " << dec << header.dataType << endl;
-			cFileManager.saveBufferFile( getVeioid(), pLapso.c_str(), pLapso.length(), header );
+			string pLapso = Sascar::ProtocolUtil::PersistableLapso(&lapso);
+
+			Dbg(TAG "Save buffer file header data type %d", header.dataType);
+			cFileManager.saveBufferFile(getVeioid(), pLapso.c_str(), pLapso.length(), header);
 		}
 	}
 }
@@ -1095,10 +1008,10 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					}
 					Dbg(TAG "Start %d i %d", /*dec,*/ inicio, /*dec,*/ i);
 				}
-				else if(sbt4.compare(i,5,"HSYNS") == 0)
+				else if(sbt4.compare(i, 5, "HSYNS") == 0)
 				{
 					Dbg(TAG "Found the HSYNS in %d", i);
-					if( inicio < i - lHsyns )
+					if(inicio < i - lHsyns)
 					{
 						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, lHsyns - 1);
 						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
@@ -1108,7 +1021,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo);
 						inicio = i - lHsyns;
 					}
-					if( inicio == i -  lHsyns)
+					if(inicio == i -  lHsyns)
 					{
 						Dbg(TAG "Creating file of type 3 from %d a %d", inicio, lHfull - 1);
 						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
@@ -1118,7 +1031,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						Dbg(TAG "Params HSYNS %d %d %d + %d + 4", /*dec,*/ inicio, /*dec,*/ arquivo, /*dec, */ ponteiroIni, i);
 
 						// Parse data
-						ParseHSYNS( sbt4.substr( inicio, lHsyns ), arquivo, ponteiroIni +i+4);
+						ParseHSYNS(sbt4.substr(inicio, lHsyns), arquivo, ponteiroIni + i + 4);
 
 						i += 5;
 						inicio = i;
@@ -1155,8 +1068,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					Dbg(TAG "Start %d i %d", /*dec,*/ inicio, /*dec,*/ i);
 				}
 			}
-			else if(i+4 < sbt4.length() &&
-					sbt4.at(i) == (unsigned char) 0x82 &&
+			else if(i+4 < sbt4.length() && sbt4.at(i) == (unsigned char) 0x82 &&
 					sbt4.compare(i,4,fimTrecho) == 0)
 			{
 				Dbg(TAG "Found the end of route in %d", i);
@@ -1206,49 +1118,7 @@ int Protocol::Project2Protocol(uint32_t projeto)
 		case EQUIPAMENTO_BD_MTC550:
 			return PROTO_MTC550;
 		break;
-
-		/*******
-		 * Nao implementei para todos pois pode alterar o funcionamento dos atuais parsers
-		 * O ideal eh ir descomentando/adicionando conforme forem feita as implementacoes
-		 *
-			  case EQUIPAMENTO_BD_MTC:
-				return PROTO_SAS401;
-				break;
-
-			  case EQUIPAMENTO_BD_VDO:
-				return PROTO_VDO;
-				break;
-
-			  case EQUIPAMENTO_BD_MTC600:
-				return PROTO_MTC600;
-				break;
-
-			  case EQUIPAMENTO_BD_MXT150:
-				return PROTO_MXT150;
-				break;
-
-			  case EQUIPAMENTO_BD_MXT100:
-				return PROTO_MXT100;
-				break;
-
-			  case EQUIPAMENTO_BD_RVS_QB:
-				return PROTO_VDOQB;
-				break;
-
-			  case EQUIPAMENTO_BD_MXT140:
-				return PROTO_MXT140;
-				break;
-
-			   case EQUIPAMENTO_BD_RVSSBTEC:
-				return PROTO_VDO_SBTEC;
-				break;
-
-			  case EQUIPAMENTO_BD_MXT150SBTEC:
-				return PROTO_MXT150_SBTEC;
-				break;
-				*/
 	}
-
 	return projeto;
 }
 

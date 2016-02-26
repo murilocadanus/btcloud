@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <util/Log.hpp>
 
+#define TAG "[File] "
+
 namespace bluetec {
 
 File::File()
@@ -27,9 +29,9 @@ File::File()
 
 File::~File()
 {
-	if( this->dirPath )
+	if(this->dirPath)
 	{
-		closedir( this->dirPath );
+		closedir(this->dirPath);
 	}
 }
 
@@ -37,15 +39,15 @@ void File::setPath(std::string path)
 {
 	this->path = path;
 
-	if( this->dirFd )
+	if(this->dirFd)
 	{
-		close( this->dirFd );
+		close(this->dirFd);
 		this->dirFd = 0;
 	}
 
-	if( this->dirPath )
+	if(this->dirPath)
 	{
-		closedir( this->dirPath );
+		closedir(this->dirPath);
 		this->dirPath = NULL;
 	}
 
@@ -55,16 +57,16 @@ void File::setPath(std::string path)
 		abort();
 	}
 
-	this->dirPath = opendir( this->path.c_str() );
+	this->dirPath = opendir(this->path.c_str());
 
-	if( !this->dirPath )
+	if(!this->dirPath)
 	{
 		throw PathNotFoundException();
 	}
 
-	this->dirFd = dirfd( this->dirPath );
+	this->dirFd = dirfd(this->dirPath);
 
-	if( !this->dirFd )
+	if(!this->dirFd)
 	{
 		throw PathNotFoundException();
 	}
@@ -72,43 +74,42 @@ void File::setPath(std::string path)
 
 void File::createDir(std::string directory)
 {
-	int fdTemp = mkdirat( this->dirFd, directory.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
+	Info(TAG "Creating directory %s", directory.c_str());
 
-	std::cout << "Criando diretorio: " << directory << std::endl;
+	int fdTemp = mkdirat(this->dirFd, directory.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-	if( fdTemp == -1 )
+	if(fdTemp == -1)
 	{
+		Error(TAG "Error when create a directory %d", strerror(errno));
+
 		if(errno != EEXIST)
-		{
-			std::cout <<" opa " << strerror( errno ) << std::endl;
 			throw PathCreateException();
-		}
-		std::cout << "aaui " << strerror( errno ) << std::endl;
 	}
 }
 
 void File::saveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile)
 {
-	if( this->dirPath == NULL ) throw PathNotDefinedException();
+	if(this->dirPath == NULL) throw PathNotDefinedException();
 
-	int fd = openat( this->dirFd, pathFile.c_str(), O_CREAT|O_RDWR|O_TRUNC, 0666 );
+	int fd = openat(this->dirFd, pathFile.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0666);
 
-	if( fd != -1 )
+	if(fd != -1)
 	{
-		std::cout << "gravando: " << pathFile << std::endl;
+		Info(TAG "Writing: %s", pathFile.c_str());
 
-		int escrito = write( fd, bufferFile, sizeBufferFile );
+		int escrito = write(fd, bufferFile, sizeBufferFile);
 
-		close( fd );
+		close(fd);
 
-		if( escrito < sizeBufferFile )
+		if(escrito < sizeBufferFile)
 		{
 			throw FileWriteException();
 		}
 	}
 	else
 	{
-		std::cout << strerror( errno ) << std::endl;
+		Error(TAG "Error when saving file %d", strerror(errno));
+
 		if( errno == ENOSPC)
 		{
 			throw NotSpaceAvaiableException();
@@ -123,30 +124,28 @@ bool File::getBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeB
 
 	struct stat st;
 
-	if( this->dirPath == NULL ) throw PathNotDefinedException();
+	if(this->dirPath == NULL) throw PathNotDefinedException();
 
-	int fd = openat( this->dirFd, pathFile.c_str(), O_RDWR );
+	int fd = openat(this->dirFd, pathFile.c_str(), O_RDWR);
 
-	if( fd != -1 )
+	if(fd != -1)
 	{
-		std::cout << "lendo: " << pathFile << std::endl;
+		Info(TAG "Reading %s", pathFile.c_str());
 
-		fstat( fd, &st );
+		fstat(fd, &st);
 
 		sizeBufferFile = st.st_size;
 
-		int lido = read( fd, bufferFile, st.st_size );
+		int lido = read(fd, bufferFile, st.st_size);
 
-		close( fd );
+		close(fd);
 
-		if( lido < st.st_size )
+		if(lido < st.st_size)
 		{
 			throw FileReadException();
 		}
-
 		retorno = true;
 	}
-
 	return retorno;
 }
 
@@ -154,17 +153,17 @@ uint32_t File::getSizeFile(uint32_t veioid, std::string pathFile)
 {
 	struct stat st;
 
-	if( this->dirPath == NULL ) throw PathNotDefinedException();
+	if(this->dirPath == NULL) throw PathNotDefinedException();
 
-	int fd = openat( this->dirFd, pathFile.c_str(), O_RDWR );
+	int fd = openat(this->dirFd, pathFile.c_str(), O_RDWR);
 
-	if( fd != -1 )
+	if(fd != -1)
 	{
-		std::cout << "getSizeFile: " << pathFile << std::endl;
+		Info(TAG "Get file size: %s", pathFile.c_str());
 
-		fstat( fd, &st );
+		fstat(fd, &st);
 
-		close( fd );
+		close(fd);
 
 		return st.st_size;
 	}
@@ -176,27 +175,23 @@ uint32_t File::getSizeFile(uint32_t veioid, std::string pathFile)
 
 void File::renameFile(std::string pathFileOld, std::string pathFileNew)
 {
-	int fd = renameat( this->dirFd, pathFileOld.c_str(), this->dirFd , pathFileNew.c_str());
+	Info(TAG "Rename file: %s to %s", pathFileOld.c_str(), pathFileNew.c_str());
 
-	std::cout << "renameFile: " << pathFileOld << " para " << pathFileNew << std::endl;
+	int fd = renameat(this->dirFd, pathFileOld.c_str(), this->dirFd, pathFileNew.c_str());
 
-	if( fd == -1 )
+	if(fd == -1)
 	{
-		std::cout << "renameFile: " << strerror( errno ) << std::endl;
+		Error(TAG "Error when renaming file %d", strerror(errno));
 	}
 }
 
 void File::delFile(std::string pathFile)
 {
 	std::stringstream del;
-
-	//del << this->path << "/" << this->getDirectory( veioid ) << "/" << nameFile;
 	del << this->path << "/" << pathFile;
 
-	std::cout << "deletando: " << del.str() << std::endl;
-
+	Info(TAG "Removing file: %s", del.str().c_str());
 	remove(del.str().c_str());
-
 }
 
-} /* namespace bluetec */
+} // namespace

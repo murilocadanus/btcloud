@@ -9,7 +9,10 @@
 #include <sstream>
 #include <string.h>
 #include <chrono>
+#include <util/Log.hpp>
 #include "SwapFile.h"
+
+#define TAG "[BlueTecFileManager] "
 
 namespace bluetec {
 
@@ -40,60 +43,48 @@ bool BlueTecFileManager::getBufferFile(uint32_t veioid, uint32_t pointer, uint16
 
 	std::stringstream nameFile;
 
-	/* Pesquisa o pointer e o file no indice de um determinado veioid */
+	// Search a point and file in a index of specified veioid
 	if(getsBluetecHeaderFile(veioid, pointer, file, bluetecHeaderFile))
 	{
 		nameFile << bluetecHeaderFile.headerFile.id;
-		/* Busca o arquivo no diretorio e retorna o buffer... */
+
+		// Search the file in the directory and return the buffer
 		retorno = this->files.getBufferFileVeioid(veioid, nameFile.str(), bufferFile, sizeBufferFile);
 	}
 
 	return retorno;
 }
 
-/*
- * Salva o buffer em um arquivo sempre novo.
- */
+// Save buffer in a new file
 void BlueTecFileManager::saveBufferFile(uint32_t veioid, const char *bufferFile, uint32_t sizeBufferFile, struct sBluetecHeaderFile& bluetecHeaderFile)
 {
 	auto duration = std::chrono::system_clock::now().time_since_epoch();
-
 	uint64_t nano = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
 
-	std::cout << nano << std::endl;
+	Dbg(TAG "%d", nano);
 
 	std::vector<struct sBluetecHeaderFile*> *vec = this->getListsBluetecHeaderFile(veioid);
-
 	struct sBluetecHeaderFile *header = new sBluetecHeaderFile();
 
 	*header = bluetecHeaderFile;
-
-	header->headerFile.id = nano; // nome do arquivo.
-
+	header->headerFile.id = nano; // file name
 	vec->push_back(header);
 
-	std::cout << "Vec size: " << vec->size() << std::endl;
+	Dbg(TAG "Vec size: %d", vec->size());
 
 	std::stringstream nameFile;
-
 	nameFile << header->headerFile.id;
 
 	this->files.saveBufferFileVeioid(veioid, bufferFile, sizeBufferFile, nameFile.str());
-
 	this->saveIndexFile(veioid, vec);
-
 	this->deleteIndexFileObject(vec);
 }
 
-/*
- * Remove o arquivo fisicamente.
- */
+// Remove file
 void BlueTecFileManager::delFile(uint32_t veioid, sHeaderFile file)
 {
 	std::stringstream nameFile;
-
 	std::vector<struct sBluetecHeaderFile*>::iterator it;
-
 	std::vector<struct sBluetecHeaderFile*> *vec = this->getListsBluetecHeaderFile(veioid);
 
 	nameFile << file.id;
@@ -113,9 +104,7 @@ void BlueTecFileManager::delFile(uint32_t veioid, sHeaderFile file)
 	this->deleteIndexFileObject(vec);
 }
 
-/*
- * Retorna o header para um determinado veioid pesquisando pelo pointer e file.
- */
+// Return veioid header using a pointer and file
 bool BlueTecFileManager::getsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct sBluetecHeaderFile& bluetecHeaderFile)
 {
 	bool retorno = false;
@@ -139,26 +128,20 @@ bool BlueTecFileManager::getsBluetecHeaderFile(uint32_t veioid, uint32_t pointer
 	return retorno;
 }
 
-/*
- * Retorna a lista de header para um determinado veioid.
- */
+// Return veiod header list
 std::vector<struct sBluetecHeaderFile*> *BlueTecFileManager::getListsBluetecHeaderFile(uint32_t veioid)
 {
 	std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile = new std::vector<struct sBluetecHeaderFile*>();
-
 	struct sBluetecHeaderFile *pHeader, *he;
-
 	uint32_t sizeBufferFileHeader = 0, size;
-
 	char *bufferFileHeader = NULL;
 
 	try
 	{
-		size = this->files.getSizeFile( veioid, NAME_INDEX_FILE );
-
+		size = this->files.getSizeFile(veioid, NAME_INDEX_FILE);
 		bufferFileHeader = new char[size];auto duration = std::chrono::system_clock::now().time_since_epoch();
 
-		if(this->files.getBufferFileVeioid( veioid, NAME_INDEX_FILE, bufferFileHeader, sizeBufferFileHeader ))
+		if(this->files.getBufferFileVeioid(veioid, NAME_INDEX_FILE, bufferFileHeader, sizeBufferFileHeader))
 		{
 			pHeader = (struct sBluetecHeaderFile*)bufferFileHeader;
 
@@ -176,7 +159,7 @@ std::vector<struct sBluetecHeaderFile*> *BlueTecFileManager::getListsBluetecHead
 	}
 	catch(IFile::FileNotFoundException &)
 	{
-		std::cout << "Arquivo de index nao existe... Tudo bem ele sera criado..." << std::endl;
+		Error(TAG "Index of file does not exist");
 	}
 	catch(IFile::FileReadException &)
 	{
@@ -184,25 +167,22 @@ std::vector<struct sBluetecHeaderFile*> *BlueTecFileManager::getListsBluetecHead
 		{
 			delete[] bufferFileHeader;
 		}
-		std::cout << "Nao foi possivel ler o arquivo por algum motivo... " << std::endl;
+		Error(TAG "Can not read file");
 	}
 
 	return listBluetecHeaderFile;
 }
 
-/*
- * Salva alteracao no indice.
- */
+// Save changes at index
 void BlueTecFileManager::saveIndexFile(uint32_t veioid, std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile)
 {
 	struct sBluetecHeaderFile *ph;
-	/* Faz uma limpeza nos arquivos... */
+
+	// Clean files
 	this->vacuum( veioid, listBluetecHeaderFile );
 
 	int size = listBluetecHeaderFile->size() * sizeof(struct sBluetecHeaderFile);
-
 	char *buffer = new char[size];
-
 	ph = (struct sBluetecHeaderFile*) buffer;
 
 	for(std::vector<struct sBluetecHeaderFile*>::iterator it = listBluetecHeaderFile->begin(); it != listBluetecHeaderFile->end(); it++)
@@ -232,25 +212,23 @@ uint32_t BlueTecFileManager::getNextIdTrecho()
 	char buffer[5] = {0};
 	uint32_t sizeBufferFile = 0, sequence = 0;
 
-	//Interface...
+	// Interface
 	if(this->files.getBufferFile(SEQUENCE_TRECHO, buffer, sizeBufferFile))
 	{
 		memcpy(&sequence, buffer, 4);
-
 		uint32_t tmp = sequence;
 
-		std::cout << "sequence: " << sequence << std::endl;
+		Dbg(TAG "Sequence: %d", sequence);
 
 		tmp++;
-
 		memcpy(buffer, &tmp, 4);
 
-		// Salva a alteracao...
+		// Save changes
 		this->files.saveBufferFile(SEQUENCE_TRECHO, buffer, 4);
 	}
 	else
 	{
-		// se o arquivo ainda nao existe entao cria...
+		// Create file if it not exist
 		this->files.saveBufferFile(SEQUENCE_TRECHO, buffer, 4);
 	}
 
@@ -289,7 +267,7 @@ void BlueTecFileManager::vacuum(uint32_t veioid, std::vector<struct sBluetecHead
 
 		std::chrono::nanoseconds s ((*it)->headerFile.id);
 
-		//Se o arquivo estiver la mais de 7 dias, adiciona na lista para remover.
+		// If the file is there more than 7 days, add it to the list to remove
 		if(((std::chrono::duration_cast<std::chrono::seconds>(duration).count() - std::chrono::duration_cast<std::chrono::seconds>(s).count()) / 86400) >= 7)
 		{
 			listTemp.push_back(*it);
@@ -313,5 +291,5 @@ void BlueTecFileManager::vacuum(uint32_t veioid, std::vector<struct sBluetecHead
 	}
 }
 
-} /* namespace bluetec */
+} // namespace
 
