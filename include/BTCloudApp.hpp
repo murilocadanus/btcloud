@@ -6,8 +6,8 @@
 #include <api/mysql/MySQLConnector.hpp>
 #include <interface/IEventFileSystemListener.hpp>
 #include <mongo/client/dbclient.h> // for the driver
+#include "managers/BlueTecFileManager.h"
 #include "Defines.hpp"
-#include "BlueTecFileManager.h"
 #include "Configuration.hpp"
 #include "Protocol.hpp"
 

@@ -10,8 +10,8 @@
 #include <iostream>
 #include <stdint.h>
 #include <vector>
-#include "FileMod.h"
-#include "SwapFile.h"
+#include "io/FileMod.h"
+#include "io/SwapFile.h"
 
 namespace bluetec {
 

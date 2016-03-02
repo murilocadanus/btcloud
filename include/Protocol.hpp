@@ -9,7 +9,7 @@
 #include "entities/pacote_posicao.pb.h"
 #include "mongo/client/dbclient.h" // for the driver
 #include "entities/bluetec400.pb.h"
-#include "BlueTecFileManager.h"
+#include "managers/BlueTecFileManager.h"
 
 using namespace std;
 

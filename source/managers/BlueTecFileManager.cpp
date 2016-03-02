@@ -5,12 +5,12 @@
  *      Author: david.campos
  */
 
-#include "BlueTecFileManager.h"
 #include <sstream>
 #include <string.h>
 #include <chrono>
 #include <util/Log.hpp>
-#include "SwapFile.h"
+#include "managers/BlueTecFileManager.h"
+#include "io/SwapFile.h"
 
 #define TAG "[BlueTecFileManager] "
 

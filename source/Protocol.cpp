@@ -10,12 +10,12 @@
 #include <stdio.h>
 #include <algorithm>
 #include <util/Log.hpp>
-#include "clock.h"
 #include "mongo/client/dbclient.h" // for the driver
 #include "Configuration.hpp"
 #include <api/mysql/MySQLConnector.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <System.hpp>
 
 #define TAG "[Protocol] "
 
@@ -287,12 +287,12 @@ void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 	std::string client = cad.clientName;
 
 	u_int64_t datePosition = data.pe().ep().datahora() == 0
-			? clock::horaatual
+			? pTimer->GetCurrentTime()
 			: data.pe().ep().datahora(); // "2015-11-05T08:40:44.000Z"
 	datePosition *= 1000;
 
 	u_int64_t dateArrival = data.pe().ep().datachegada() == 0
-			? clock::horaatual
+			? pTimer->GetCurrentTime()
 			: data.pe().ep().datachegada(); //"2015-11-05T08:40:44.000Z";
 	dateArrival *= 1000;
 
@@ -342,14 +342,14 @@ void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 
 	Log(TAG "%s %s", dataPosJSON.toString().c_str(), pConfiguration->GetMongoDBCollection().c_str());
 
-//	try
-//	{
-//		pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
-//	}
-//	catch(std::exception &e)
-//	{
-//		Log(TAG "%s", e.what());
-//	}
+	try
+	{
+		pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
+	}
+	catch(std::exception &e)
+	{
+		Log(TAG "%s", e.what());
+	}
 
 }
 
@@ -628,7 +628,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 								posicao->set_long2(lon);
 								posicao->set_datahora(lapso.timestamp);
 								//	posicao->set_datachegada(lapso.timestamp);
-								posicao->set_datachegada(clock::horaatual);
+								posicao->set_datachegada(pTimer->GetCurrentTime());
 
 								eventoflag = posicao->mutable_eventoflag();
 

@@ -1,28 +1,27 @@
 SOURCES +=	source/main.cpp \
-			source/BlueTecFileManager.cpp \
-			source/FileMod.cpp \
-			source/SwapFile.cpp \
-			source/File.cpp \
 			source/Protocol.cpp \
 			source/BTCloudApp.cpp \
+			source/managers/BlueTecFileManager.cpp \
+			source/io/FileMod.cpp \
+			source/io/SwapFile.cpp \
+			source/io/File.cpp \
 			source/entities/pacote_posicao.pb.cc \
 			source/entities/bluetec400.pb.cc \
-			source/clock.cpp \
-    source/util/ProtocolUtil.cpp
+			source/util/ProtocolUtil.cpp
+
 
 HEADERS +=	\
-			include/IFile.h \
 			include/Defines.hpp \
-			include/BlueTecFileManager.h \
-			include/FileMod.h \
-			include/SwapFile.h \
-			include/File.h \
 			include/Protocol.hpp \
 			include/BTCloudApp.hpp \
+			include/managers/BlueTecFileManager.h \
+			include/io/IFile.h \
+			include/io/FileMod.h \
+			include/io/SwapFile.h \
+			include/io/File.h \
 			include/entities/pacote_posicao.pb.h \
 			include/entities/bluetec400.pb.h \
-			include/clock.h \
-    include/util/ProtocolUtil.hpp
+			include/util/ProtocolUtil.hpp
 
 OTHER_FILES += resources/app.config \
 
@@ -30,4 +29,4 @@ include("app.pri")
 include("compiler.pri")
 
 DISTFILES += \
-    resources/Model.json
+			resources/Model.json
