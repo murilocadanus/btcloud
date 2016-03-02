@@ -3,6 +3,7 @@
 
 #define TAG "[ProtocolUtil] "
 
+
 namespace Sascar { namespace ProtocolUtil {
 
 void LapsoSetup(string lapso, struct sLapso& setup)
@@ -14,71 +15,73 @@ void LapsoSetup(string lapso, struct sLapso& setup)
 
 	size_t index = 0;
 	setup.velocidade = stoi(lapso.substr(index, lapso.find("##", index)));
-	Dbg(TAG "Speed: %5.2f", setup.velocidade);
+	Dbg(TAG "Index: %d Speed: %5.2f", index, setup.velocidade);
 
 	index = lapso.find("##", index) + 2;
 	setup.rpm = stoi(lapso.substr(index, lapso.find("##", index)));
-	Dbg(TAG "Rpm: %5.2f", setup.rpm);
+	Dbg(TAG "Index: %d Rpm: %5.2f", index, setup.rpm);
 
 	index = lapso.find("##", index ) + 2;
 	setup.acelx = stoi(lapso.substr(index, lapso.find("##", index)));
-	Dbg(TAG "Acel x: %5.2f", setup.acelx);
+	Dbg(TAG "Index: %d Acel x: %5.2f", index, setup.acelx);
 
 	index = lapso.find("##", index) + 2;
 	setup.acely = stoi(lapso.substr(index, lapso.find("##", index)));
-	Dbg(TAG "Acel y: %5.2f", setup.acely);
+	Dbg(TAG "Index: %d Acel y: %5.2f", index, setup.acely);
+
+	index = lapso.find("##", index) + 1;
+
+	setup.ed1 = (int) (lapso.at(++index));
+	Dbg(TAG "Index: %d Ed 1: %c", index, setup.ed1);
+
+	setup.ed2 = (int) (lapso.at(++index));
+	Dbg(TAG "Index %d Ed 2: %c", index, setup.ed2);
+
+	setup.ed3 = (int) (lapso.at(++index));
+	Dbg(TAG "Index: %d Ed 3: %c", index, setup.ed3);
+
+	setup.ed4 = (int) (lapso.at(++index));
+	Dbg(TAG "Index: %d Ed 4: %c", index, setup.ed4);
+
+	setup.ed5 = (int) (lapso.at(++index));
+	Dbg(TAG "Index: %d Ed 5: %c", index, setup.ed5);
+
+	setup.ed6 = (int) (lapso.at(++index));
+	Dbg(TAG "Index: %d Ed 6: %c", index, setup.ed6);
+
+	setup.ed7 = (int) (lapso.at(++index));
+	Dbg(TAG "Index: %d Ed 7: %c", index, setup.ed7);
+
+	setup.ed8 = (int) (lapso.at(++index));
+	Dbg(TAG "Index: %d Ed 8: %c", index, setup.ed8);
 
 	index = lapso.find("##", index) + 2;
-
-	setup.ed1 = (int) (lapso.at(index));
-	Dbg(TAG "Ed 1: %d", setup.ed1);
-
-	setup.ed2 = (int) (lapso.at(index++));
-	Dbg(TAG "Ed 2: %d", setup.ed2);
-
-	setup.ed3 = (int) (lapso.at(index++));
-	Dbg(TAG "Ed 3: %d", setup.ed3);
-
-	setup.ed4 = (int) (lapso.at(index++));
-	Dbg(TAG "Ed 4: %d", setup.ed4);
-
-	setup.ed5 = (int) (lapso.at(index++));
-	Dbg(TAG "Ed 5: %d", setup.ed5);
-
-	setup.ed6 = (int) (lapso.at(index++));
-	Dbg(TAG "Ed 6: %d", setup.ed6);
-
-	setup.ed7 = (int) (lapso.at(index++));
-	Dbg(TAG "Ed 7: %d", setup.ed7);
-
-	setup.ed8 = (int) (lapso.at(index++));
-	Dbg(TAG "Ed 8: %d", setup.ed8);
-
-	try { setup.an1 = stoi(lapso.substr(index, lapso.find("##", index) - 1)); }
-	catch(std::invalid_argument& e){ Error(TAG "invalid_argument %s", e.what()); }
-	catch(std::out_of_range& e){ Error(TAG "out_of_range %s", e.what()); }
-	catch(...){ Error(TAG "Error"); }
+	setup.an1 = stoi(lapso.substr(index, lapso.find("##", index) - 1));
+	Dbg(TAG "Index: %d An 1: %d", index, setup.an1);
 
 	index = lapso.find("##", index) + 2;
-	//cout << "7 ... ";
 	setup.an2 = stoi(lapso.substr(index, lapso.find("##", index) - 1));
+	Dbg(TAG "Index: %d An 2: %d", index, setup.an2);
+
 	index = lapso.find("##", index) + 2;
-	//cout << "8 ... ";
 	setup.an3 = stoi(lapso.substr(index, lapso.find("##", index) - 1));
+	Dbg(TAG "Index: %d An 3: %d", index, setup.an3);
+
 	index = lapso.find("##", index) + 2;
-	//cout << "9 ... ";
 	setup.an4 = stoi(lapso.substr(index, lapso.find("##", index) - 1));
+	Dbg(TAG "Index: %d An 4: %d", index, setup.an4);
+
 	index = lapso.find("##", index) + 2;
-	//cout << "10 ... ";
-	setup.odometro = stol(lapso.substr(index, lapso.find("##", index) - 1));
+	setup.odometro = stof(lapso.substr(index, lapso.find("##", index) - 1));
+	Dbg(TAG "Index: %d odometer: %f", index, setup.odometro);
+
 	index = lapso.find("##", index) + 2;
-	//cout << "11 ... ";
-	setup.horimetro = stol(lapso.substr(index, lapso.find("##", index) - 1));
+	setup.horimetro = stof(lapso.substr(index, lapso.find("##", index) - 1));
+	Dbg(TAG "Index: %d Horimetro: %f", index, setup.horimetro);
+
 	index = lapso.find("##", index) + 2;
-	//cout << "12 ... ";
 	setup.ibtMotorista = lapso.substr(index, lapso.find("##", index) - 1);
-	index = lapso.find("##", index) + 2;
-	//cout << " OK! " << endl;
+	Dbg(TAG "Index: %d ibtMotorista: %s", index, setup.ibtMotorista.c_str());
 }
 
 void LapsoToTelemetria(pacote_posicao::t_telemetria_bluetec400 *tele, struct sLapso& lapso)

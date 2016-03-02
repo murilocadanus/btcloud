@@ -71,7 +71,7 @@ void FileMod::saveBufferFileVeioid(uint32_t veioid, const char *bufferFile, int 
 bool FileMod::getBufferFileVeioid(uint32_t veioid, std::string nameFile, char *bufferFile, uint32_t& sizeBufferFile)
 {
 	std::string pathFile = this->getDirectory( veioid ) + "/" + nameFile;
-	return this->file->getBufferFile( pathFile, bufferFile, sizeBufferFile );
+	return this->file->getBufferFile(pathFile, bufferFile, sizeBufferFile);
 }
 
 void FileMod::saveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile)

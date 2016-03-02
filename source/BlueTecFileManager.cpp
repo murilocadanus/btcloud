@@ -154,12 +154,11 @@ std::vector<struct sBluetecHeaderFile*> *BlueTecFileManager::getListsBluetecHead
 				pHeader++;
 			}
 		}
-
 		delete[] bufferFileHeader;
 	}
 	catch(IFile::FileNotFoundException &)
 	{
-		Error(TAG "Index of file does not exist");
+		Error(TAG "Warning: Index of file does not exist");
 	}
 	catch(IFile::FileReadException &)
 	{

@@ -42,7 +42,7 @@ uint32_t getVeioid()
 
 void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo)
 {
-	Dbg(TAG "Init parse HFULL");
+	Info(TAG "Init parse HFULL");
 
 	bluetec::sHfull hfull;
 	bluetec::sBluetecHeaderFile header;
@@ -286,10 +286,16 @@ void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 	std::string plate = cad.placa;
 	std::string client = cad.clientName;
 
-	u_int64_t datePosition = data.pe().ep().datahora(); // "2015-11-05T08:40:44.000Z"
+	u_int64_t datePosition = data.pe().ep().datahora() == 0
+			? clock::horaatual
+			: data.pe().ep().datahora(); // "2015-11-05T08:40:44.000Z"
 	datePosition *= 1000;
-	u_int64_t dateArrival = data.pe().ep().datachegada(); //"2015-11-05T08:40:44.000Z";
+
+	u_int64_t dateArrival = data.pe().ep().datachegada() == 0
+			? clock::horaatual
+			: data.pe().ep().datachegada(); //"2015-11-05T08:40:44.000Z";
 	dateArrival *= 1000;
+
 	std::string address = "";
 	std::string neighborhood = "";
 	std::string city = "";
@@ -334,9 +340,17 @@ void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 					)
 				);
 
-	Log(TAG "%s", dataPosJSON.toString().c_str());
+	Log(TAG "%s %s", dataPosJSON.toString().c_str(), pConfiguration->GetMongoDBCollection().c_str());
 
-	//pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
+//	try
+//	{
+//		pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
+//	}
+//	catch(std::exception &e)
+//	{
+//		Log(TAG "%s", e.what());
+//	}
+
 }
 
 void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
@@ -869,7 +883,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 {
 	cFileManager.setPath(pConfiguration->GetAppListeningPath());
 
-	if(!pDBClientConnection)
+//	if(!pDBClientConnection)
 		pDBClientConnection = dbClient;
 
 	pacote_posicao::equip_contrato *contrato;

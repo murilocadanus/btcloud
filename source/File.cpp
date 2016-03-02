@@ -108,7 +108,7 @@ void File::saveBufferFile(std::string pathFile, const char *bufferFile, uint32_t
 	}
 	else
 	{
-		Error(TAG "Error when saving file %d", strerror(errno));
+		Info(TAG "File do not exist: %s", pathFile.c_str());
 
 		if( errno == ENOSPC)
 		{
