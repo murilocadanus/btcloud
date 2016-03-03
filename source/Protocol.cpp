@@ -29,11 +29,8 @@ pacote_posicao::equip_flags *eventoflag;
 pacote_posicao::equip_posicao *posicao;
 static int lapsoSize = sizeof(long int) + sizeof(double) * 6 + sizeof(int) * 13 + 16;
 pacote_posicao::t_telemetria_bluetec400 *telemetria;
-pacote_posicao::pacote_enriquecido *pacote;
-pacote_posicao::bluetec400 bluetecPacote;
 cache_cadastro cad;
 pacote_posicao::t32_odo_vel *odo_vel_gps;
-
 
 uint32_t getVeioid()
 {
@@ -279,51 +276,53 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	cFileManager.saveBufferFile(getVeioid(), pLapso.c_str(), pLapso.length(), header);
 }
 
-void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
+void Protocol::CreatePosition()
 {
+	// Get all values from bluetec package
 	int idEquipment = cad.id;
 	int vehicle = cad.veioid;
 	std::string plate = cad.placa;
 	std::string client = cad.clientName;
 
-	u_int64_t datePosition = data.pe().ep().datahora() == 0
+	u_int64_t datePosition = cBluetecPacote.pe().ep().datahora() == 0
 			? pTimer->GetCurrentTime()
-			: data.pe().ep().datahora(); // "2015-11-05T08:40:44.000Z"
+			: cBluetecPacote.pe().ep().datahora(); // "2015-11-05T08:40:44.000Z"
 	datePosition *= 1000;
 
-	u_int64_t dateArrival = data.pe().ep().datachegada() == 0
+	u_int64_t dateArrival = cBluetecPacote.pe().ep().datachegada() == 0
 			? pTimer->GetCurrentTime()
-			: data.pe().ep().datachegada(); //"2015-11-05T08:40:44.000Z";
+			: cBluetecPacote.pe().ep().datachegada(); //"2015-11-05T08:40:44.000Z";
 	dateArrival *= 1000;
 
 	std::string address = "";
 	std::string neighborhood = "";
 	std::string city = "";
 	std::string province = "";
-	int velocity = data.tb(0).velocidade();
-	double lat2 = data.pe().ep().lat2();
-	double long2 = data.pe().ep().long2();
+	int velocity = cBluetecPacote.tb(0).velocidade();
+	double lat2 = cBluetecPacote.pe().ep().lat2();
+	double long2 = cBluetecPacote.pe().ep().long2();
 	std::string number = "";
 	std::string country = "";
 	std::string velocityStreet = "";
 	bool gps = true;
 
-	int32_t analogic1 = data.tb_size() > 0 ? data.tb(0).an1() : 0;
-	int32_t analogic2 = data.tb_size() > 0 ? data.tb(0).an2() : 0;
-	int32_t analogic3 = data.tb_size() > 0 ? data.tb(0).an3() : 0;
-	int32_t analogic4 = data.tb_size() > 0 ? data.tb(0).an4() : 0;
-	bool digital1 = data.tb(0).ed7();
-	bool digital2 = data.tb(0).ed6();
-	bool digital3 = data.tb(0).ed5();
-	bool digital4 = data.tb(0).ed4();
-	int32_t horimeter = data.tb_size() > 0 ? data.tb(0).horimetro() : 0;
-	double_t accelerometerX = data.tb_size() > 0 ? data.tb(0).acelx() : .0;
-	double_t accelerometerY = data.tb_size() > 0 ? data.tb(0).acely() : .0;
-	double_t hodometer = data.tb_size() > 0 ? data.tb(0).odometro() : .0;
-	int32_t rpm = data.tb_size() > 0 ? data.tb(0).rpm() : 0;
-	bool ignition = data.pe().ep().eventoflag().ignicao();
-	bool breaks = data.tb(0).ed8();
+	int32_t analogic1 = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).an1() : 0;
+	int32_t analogic2 = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).an2() : 0;
+	int32_t analogic3 = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).an3() : 0;
+	int32_t analogic4 = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).an4() : 0;
+	bool digital1 = cBluetecPacote.tb(0).ed7();
+	bool digital2 = cBluetecPacote.tb(0).ed6();
+	bool digital3 = cBluetecPacote.tb(0).ed5();
+	bool digital4 = cBluetecPacote.tb(0).ed4();
+	int32_t horimeter = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).horimetro() : 0;
+	double_t accelerometerX = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).acelx() : .0;
+	double_t accelerometerY = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).acely() : .0;
+	double_t hodometer = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).odometro() : .0;
+	int32_t rpm = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).rpm() : 0;
+	bool ignition = cBluetecPacote.pe().ep().eventoflag().ignicao();
+	bool breaks = cBluetecPacote.tb(0).ed8();
 
+	// Create BSON to be persisted
 	mongo::BSONObj dataPosJSON = BSON(
 				"id_equipamento" << idEquipment << "veiculo" << vehicle << "placa" << plate << "cliente" << client <<
 				"data_posicao" << mongo::Date_t(datePosition) << "data_chegada" << mongo::Date_t(dateArrival) <<
@@ -331,26 +330,85 @@ void Protocol::PersistJSONData(pacote_posicao::bluetec400 data)
 				<< "estado" << province <<
 				"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2)) <<
 				"numero" << number << "pais" << country << "velocidade_via" << velocityStreet << "gps" << gps <<
+				"entradas" << BSON("ignicao" << ignition << "entrada1" << false << "entrada2" << false << "entrada3" << false <<
+					"entrada4" << false << "entrada5" << false << "entrada6" << false << "entrada7" << false) <<
+				"saidas" << BSON("saida0" << false << "saida1" << false << "saida2" << false << "saida3" << false <<
+								 "saida4" << false << "saida5" << false << "saida6" << false << "saida7" << false) <<
 				"DadoLivre" << BSON(
 					"Analogico1" << analogic1 << "Analogico2" << analogic2 << "Analogico3" << analogic3 <<
 					"Analogico4" << analogic4 << "Horimetro" << horimeter << "AcelerometroX" << accelerometerX <<
 					"Digital1" << digital1 << "Digital2" << digital2 << "Digital3" << digital3 <<
 					"Digital4" << digital4 << "AcelerometroY" << accelerometerY << "Hodometro" << hodometer <<
-					"Ignicao" << ignition << "Rpm" << rpm << "Freio" << breaks
+					"Rpm" << rpm << "Freio" << breaks
 					)
 				);
 
-	Log(TAG "%s %s", dataPosJSON.toString().c_str(), pConfiguration->GetMongoDBCollection().c_str());
+	Log(TAG "%s %s", dataPosJSON.toString().c_str(), pConfiguration->GetMongoDBCollections().at(0).c_str());
 
 	try
 	{
-		pDBClientConnection->insert(pConfiguration->GetMongoDBCollection(), dataPosJSON);
+		// Insert json data at posicao
+		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataPosJSON);
+
+		// Insert/Update data at ultima_posicao
+		if(!HasLastPosition(vehicle))
+		{
+			pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataPosJSON);
+		}
+		else
+		{
+			UpdateLastPosition(vehicle);
+		}
 	}
 	catch(std::exception &e)
 	{
 		Log(TAG "%s", e.what());
 	}
+}
 
+bool Protocol::HasLastPosition(int vehicleId)
+{
+	// Use a cached var to evade query execute
+	if(bHasLastPosition)
+		return true;
+
+	mongo::Query query = QUERY("veiculo" << vehicleId);
+
+	Info(TAG "Has last position %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), query.toString().c_str());
+
+	auto_ptr<mongo::DBClientCursor> cursor = pDBClientConnection->query(pConfiguration->GetMongoDBCollections().at(1), query);
+
+	// Verify if it has a register at collection
+	if(cursor->more() > 0)
+	{
+		// Set a cache value to not execute the query all the time
+		bHasLastPosition = true;
+		return bHasLastPosition;
+	}
+	else
+		return false;
+}
+
+void Protocol::UpdateLastPosition(int vehicleId)
+{
+	mongo::Query query = QUERY("veiculo" << vehicleId);
+
+	// Get all values from bluetec package
+	int velocity = cBluetecPacote.tb(0).velocidade();
+	double lat2 = cBluetecPacote.pe().ep().lat2();
+	double long2 = cBluetecPacote.pe().ep().long2();
+
+	// Create update query
+	mongo::BSONObj querySet = BSON("$set" << BSON(
+										"velocidade" << velocity <<
+										"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2))
+										)
+							);
+
+	Info(TAG "Update querySet %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), querySet.toString().c_str());
+
+	// Updating based on vehicle id with multiple parameter
+	pDBClientConnection->update(pConfiguration->GetMongoDBCollections().at(1), query, querySet, false, true);
 }
 
 void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
@@ -623,7 +681,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 								Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
 								// Setting data to position package
-								posicao = pacote->mutable_ep();
+								posicao = pPacote->mutable_ep();
 								posicao->set_lat2(lat);
 								posicao->set_long2(lon);
 								posicao->set_datahora(lapso.timestamp);
@@ -645,13 +703,13 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 									sizePacote / lapsoSize, lapsoSize);
 
 								// Send position package to queue in final protobuf format
-								bluetecPacote.SerializeToString(&serializado);
+								//bluetecPacote.SerializeToString(&serializado);
 
 								// Save JSON at MongoDB
-								PersistJSONData(bluetecPacote);
+								CreatePosition();
 
-								bluetecPacote.Clear();
-								bluetecPacote.clear_tb();
+								cBluetecPacote.Clear();
+								cBluetecPacote.clear_tb();
 
 								// Reset maximum size of packet
 								sizePacote = 0;
@@ -686,20 +744,21 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 					if(sizePacote > maxSizePacote)
 					{
-						Dbg(TAG "Maximum size reahed, sending package with %d lapses with %d bytes", sizePacote / lapsoSize, lapsoSize);
+						Dbg(TAG "Maximum size reached, sending package with %d lapses with %d bytes", sizePacote / lapsoSize, lapsoSize);
+
 						// Send case overlaps the size
-						bluetecPacote.SerializeToString(&serializado);
+						//bluetecPacote.SerializeToString(&serializado);
 
 						// Save data at MongoDB
-						PersistJSONData(bluetecPacote);
-						bluetecPacote.clear_tb();
+						//CreatePosition();
+						cBluetecPacote.clear_tb();
 
 						// Reset the value of package with the size of lapse
 						sizePacote = lapsoSize;
 					}
 					else
 					{
-						telemetria = bluetecPacote.add_tb();
+						telemetria = cBluetecPacote.add_tb();
 						Sascar::ProtocolUtil::LapsoToTelemetria(telemetria, lapso);
 					}
 					lapso.timestamp += hfull.lapso;
@@ -715,9 +774,9 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			}
 		}
 
-		bluetecPacote.SerializeToString(&serializado);
-		PersistJSONData(bluetecPacote);
-		bluetecPacote.clear_tb();
+		//bluetecPacote.SerializeToString(&serializado);
+		//CreatePosition();
+		cBluetecPacote.clear_tb();
 
 		// Case do not exist a end of route, the last lapse must be returned
 		// to persist and to not reprocess
@@ -736,6 +795,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 }
 
 Protocol::Protocol()
+	: bHasLastPosition(false)
 {
 }
 
@@ -859,23 +919,27 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 
 void Protocol::FillDataContract(std::string clientName, std::string plate, cache_cadastro &retorno)
 {
-	retorno.veioid = 0;
-	retorno.esn = atoi(plate.c_str());
-
-	// Get client from mysql database
-	GetClientData(retorno, plate);
-
-	// Case this plate does not exist, create it
-	if(retorno.veioid == 0)
+	// Use a local cache to avoid access mysql db
+	if(retorno.placa.compare(plate) != 0)
 	{
-		uint32_t clientId = CreateClient(clientName);
-		uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), 1);
-		uint32_t vehiId = CreateVehicle(clientId, equipId, plate);
+		retorno.veioid = 0;
+		retorno.esn = atoi(plate.c_str());
 
-		retorno.veioid = vehiId;
-		retorno.placa = plate;
-		retorno.id = equipId;
-		retorno.clientName = clientName;
+		// Get client from mysql database
+		GetClientData(retorno, plate);
+
+		// Case this plate does not exist, create it
+		if(retorno.veioid == 0)
+		{
+			uint32_t clientId = CreateClient(clientName);
+			uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), 1);
+			uint32_t vehiId = CreateVehicle(clientId, equipId, plate);
+
+			retorno.veioid = vehiId;
+			retorno.placa = plate;
+			retorno.id = equipId;
+			retorno.clientName = clientName;
+		}
 	}
 }
 
@@ -891,9 +955,9 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 	unsigned char bt4[6500];
 	std::string sbt4;
 
-	bluetecPacote.Clear();
-	pacote = bluetecPacote.mutable_pe();
-	contrato = pacote->mutable_ec();
+	cBluetecPacote.Clear();
+	pPacote = cBluetecPacote.mutable_pe();
+	contrato = pPacote->mutable_ec();
 
 	Dbg(TAG "Processing: %s", path);
 

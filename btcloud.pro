@@ -21,7 +21,8 @@ HEADERS +=	\
 			include/io/File.h \
 			include/entities/pacote_posicao.pb.h \
 			include/entities/bluetec400.pb.h \
-			include/util/ProtocolUtil.hpp
+			include/util/ProtocolUtil.hpp \
+    include/entities/Bluetec400.hpp
 
 OTHER_FILES += resources/app.config \
 

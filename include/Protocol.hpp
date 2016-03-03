@@ -90,7 +90,9 @@ class Protocol {
 
 	private:
 		int Project2Protocol(uint32_t projeto);
-		void PersistJSONData(pacote_posicao::bluetec400 data);
+		void CreatePosition();
+		bool HasLastPosition(int vehicleId);
+		void UpdateLastPosition(int vehicleId);
 		void GetClientData(cache_cadastro &retorno, std::string chave);
 		uint32_t CreateClient(std::string clientName);
 		uint32_t CreateEquipment(uint32_t projectId, uint32_t equipIMei);
@@ -126,6 +128,9 @@ class Protocol {
 	private:
 		mongo::DBClientConnection *pDBClientConnection;
 		bluetec::BlueTecFileManager cFileManager;
+		pacote_posicao::bluetec400 cBluetecPacote;
+		pacote_posicao::pacote_enriquecido *pPacote;
+		bool bHasLastPosition;
 };
 
 }

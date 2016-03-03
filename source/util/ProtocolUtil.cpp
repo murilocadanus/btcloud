@@ -276,7 +276,7 @@ double ParseLatitude(string operacao, int yAxis)
 {
 	double latitude = ParseLatLong(operacao);
 
-	if( yAxis )
+	if(yAxis)
 	{
 		return latitude * -1;
 	}

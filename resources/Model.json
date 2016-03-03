@@ -22,6 +22,26 @@
         ]
     },
     "gps" : true,
+    "entradas" : {
+        "ignicao" : false,
+        "entrada1" : false,
+        "entrada2" : false,
+        "entrada3" : false,
+        "entrada4" : false,
+        "entrada5" : false,
+        "entrada6" : false,
+        "entrada7" : false
+    },
+    "saidas" : {
+        "saida0" : "false",
+        "saida1" : "false",
+        "saida2" : "false",
+        "saida3" : "false",
+        "saida4" : "false",
+        "saida5" : "false",
+        "saida6" : "false",
+        "saida7" : "false"
+    },
     "DadoLivre" : {
         "Analogico1" : "0",
         "Analogico2" : "0",
@@ -36,7 +56,6 @@
         "AcelerometroY" : "148",
         "Hodometro" : "7603.4",
         "Rpm" : "1350",
-        "Ignicao" : false,
         "Freio" : false
     }
 }
