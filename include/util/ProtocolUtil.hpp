@@ -80,6 +80,7 @@ namespace Sascar { namespace ProtocolUtil {
 	double ParseLatLong(string operacao);
 	double ParseLatitude(string operacao, int yAxis);
 	double ParseLongitude(string operacao, int xAxis, int complemento);
+	void CreateFileNameProcessed(string *newPath, std::vector<string> tokens);
 
 }} // namespace
 

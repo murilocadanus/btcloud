@@ -80,6 +80,11 @@ void BlueTecFileManager::saveBufferFile(uint32_t veioid, const char *bufferFile,
 	this->deleteIndexFileObject(vec);
 }
 
+void BlueTecFileManager::renameFile(std::string pathFileOld, std::string pathFileNew)
+{
+	this->files.renameFile(pathFileOld, pathFileNew);
+}
+
 // Remove file
 void BlueTecFileManager::delFile(uint32_t veioid, sHeaderFile file)
 {
@@ -95,7 +100,7 @@ void BlueTecFileManager::delFile(uint32_t veioid, sHeaderFile file)
 		{
 			delete *it;
 			vec->erase(it);
-			this->files.delFileVeioid( veioid, nameFile.str() );
+			this->files.delFileVeioid(veioid, nameFile.str());
 			this->saveIndexFile(veioid, vec);
 			break;
 		}

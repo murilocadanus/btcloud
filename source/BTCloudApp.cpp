@@ -10,7 +10,7 @@
 #include <algorithm>
 #include "FileSystem.hpp"
 
-#define BTCLOUD_TAG "[BlueTec400] "
+#define TAG "[BlueTec400] "
 
 using namespace std;
 
@@ -33,7 +33,7 @@ BTCloudApp::~BTCloudApp()
 
 bool BTCloudApp::Initialize()
 {
-	Info(BTCLOUD_TAG "%s - Initializing...", pConfiguration->GetTitle().c_str());
+	Info(TAG "Initializing...");
 
 	// Add the listener to notify this object
 	pFileSystem->AddFileSystemListener(this);
@@ -46,7 +46,7 @@ bool BTCloudApp::Initialize()
 
 	// Connect to mongo client
 	BTCloudApp::cDBConnection.connect(pConfiguration->GetMongoDBHost());
-	Info(BTCLOUD_TAG "%s - Connected to mongodb", pConfiguration->GetTitle().c_str());
+	Info(TAG "Connected to mongodb");
 
 	// TODO Refactory to remove this
 	cFileManager.setPath(pConfiguration->GetAppListeningPath());
@@ -57,7 +57,7 @@ bool BTCloudApp::Initialize()
 void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
 {
 	string filePath = ev->GetDirName() + ev->GetFileName();
-	Dbg(BTCLOUD_TAG "OnFileSystemNotifyChange %s", filePath.c_str());
+	Dbg(TAG "OnFileSystemNotifyChange %s", filePath.c_str());
 
 	// Process
 	cProtocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
@@ -65,12 +65,12 @@ void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
 
 bool BTCloudApp::Shutdown()
 {
-	Info(BTCLOUD_TAG "%s - Shutting down...", pConfiguration->GetTitle().c_str());
+	Info(TAG "Shutting down...");
 
 	// Disconnect from mongodb
 	BSONObj info;
 	BTCloudApp::cDBConnection.logout(pConfiguration->GetMongoDBHost(), info);
-	Info(BTCLOUD_TAG "%s - Disconnected from mongodb", pConfiguration->GetTitle().c_str());
+	Info(TAG "Disconnected from mongodb");
 
 	return true;
 }

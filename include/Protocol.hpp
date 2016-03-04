@@ -94,6 +94,7 @@ class Protocol {
 		bool HasLastPosition(int vehicleId);
 		void UpdateLastPosition(int vehicleId);
 		void GetClientData(cache_cadastro &retorno, std::string chave);
+		uint32_t GetClient(std::string clientName);
 		uint32_t CreateClient(std::string clientName);
 		uint32_t CreateEquipment(uint32_t projectId, uint32_t equipIMei);
 		uint32_t CreateVehicle(uint32_t clientId, uint32_t equipId, string plate);

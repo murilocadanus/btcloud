@@ -1,10 +1,3 @@
-/*
- * BlueTecFileManager.h
- *
- *  Created on: 22/10/2013
- *      Author: david.campos
- */
-
 #ifndef BLUETECFILEMANAGER_H_
 #define BLUETECFILEMANAGER_H_
 #include <iostream>
@@ -14,11 +7,6 @@
 #include "io/SwapFile.h"
 
 namespace bluetec {
-
-/*
- * Classe Responsável por gerenciar os arquivos que estão sendo processados
- * pelo parser da bluetec.
- */
 
 #define NAME_INDEX_FILE "file.idx"
 #define SEQUENCE_TRECHO "sequence"
@@ -133,22 +121,32 @@ class BlueTecFileManager
 		 * Retorna o buffer para um determinado arquivo.
 		 */
 		virtual bool getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct sBluetecHeaderFile& bluetecHeaderFile);
+
 		/*
 		 * Salva o buffer em um determinado arquivo.
 		 */
 		virtual void saveBufferFile(uint32_t veioid, const char *bufferFile, uint32_t sizeBufferFile, struct sBluetecHeaderFile& bluetecHeaderFile);
+
+		/*
+		 * Rename file at disk
+		 */
+		void renameFile(std::string pathFileOld, std::string pathFileNew);
+
 		/*
 		 * Remove um arquivo fisicamente.
 		 */
 		virtual void delFile(uint32_t veioid, sHeaderFile file);
+
 		/*
 		 * Retorna um novo id de trecho.
 		 */
 		virtual uint32_t getNextIdTrecho();
+
 		/*
 		 * Retorna o HFUll de um equipamento especifico.
 		 */
 		virtual bool getHfull(uint32_t veioid, sHfull& hfull);
+
 		/*
 		 * Salva salva o hfull do equipamento especifico.
 		 */

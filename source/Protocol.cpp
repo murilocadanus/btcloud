@@ -13,13 +13,11 @@
 #include "mongo/client/dbclient.h" // for the driver
 #include "Configuration.hpp"
 #include <api/mysql/MySQLConnector.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/classification.hpp>
 #include <System.hpp>
+#include <util/String.hpp>
 
 #define TAG "[Protocol] "
 
-using namespace boost::algorithm;
 
 namespace Sascar
 {
@@ -101,7 +99,7 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	//hfull.reservado10;
 	//hfull.hfull[5];
 
-	cFileManager.saveHfull( getVeioid(), hfull );
+	cFileManager.saveHfull(getVeioid(), hfull);
 
 	Dbg(TAG "Fixing file cursor before and after HFULL");
 
@@ -854,6 +852,40 @@ void Protocol::GetClientData(cache_cadastro &retorno, std::string chave)
 	pMysqlConnector->Disconnect();
 }
 
+uint32_t Protocol::GetClient(std::string clientName)
+{
+	uint32_t clientId = 0;
+
+	// Connect to mysql
+	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
+							 , pConfiguration->GetMySQLUser()
+							 , pConfiguration->GetMySQLPassword()
+							 , pConfiguration->GetMySQLScheme());
+
+	string query("");
+	query.append("SELECT id FROM clientes WHERE clinome = '").append(clientName).append("')");
+
+	// Get client id
+	if(pMysqlConnector->Execute(query))
+	{
+		auto mysqlResult = pMysqlConnector->Result();
+		if(mysqlResult)
+		{
+			auto mysqlRow = pMysqlConnector->FetchRow(mysqlResult);
+			if(mysqlRow)
+			{
+				clientId = atoi(mysqlRow[0]);
+				pMysqlConnector->FreeResult(mysqlResult);
+			}
+		}
+	}
+
+	// Diconnect from mysql
+	pMysqlConnector->Disconnect();
+
+	return clientId;
+}
+
 uint32_t Protocol::CreateClient(std::string clientName)
 {
 	// Connect to mysql
@@ -931,7 +963,12 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, cache
 		// Case this plate does not exist, create it
 		if(retorno.veioid == 0)
 		{
-			uint32_t clientId = CreateClient(clientName);
+			uint32_t clientId = GetClient(clientName);
+
+			// Create a client case it does not exist
+			if(!clientId)
+				clientId = CreateClient(clientName);
+
 			uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), 1);
 			uint32_t vehiId = CreateVehicle(clientId, equipId, plate);
 
@@ -963,7 +1000,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 
 	// Tokenize path to get client, plate and file
 	std::vector<std::string> tokens;
-	split(tokens, path, is_any_of("/"));
+	tokens = StringUtil::split(path, '/');
 
 	// The client name is the parent folder at -3 position
 	std::string clientName(tokens[tokens.size() - 3]);
@@ -980,7 +1017,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 	Info(TAG "Processing file: %s", fileName.c_str());
 
 	// Verify the name of file to contains BT4
-	if(fileName.length() < 3 || ( fileName.substr( 0, 3 ) != "BT4"))
+	if(fileName.length() < 3 || (fileName.substr(0, 3) != "BT4"))
 	{
 		Info(TAG "Ignoring %s, it is not in BT4 format", fileName.c_str());
 		return;
@@ -1184,9 +1221,14 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 			// Parse data
 			ParseData(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo);
 		}
-		fclose(in);
-	}
 
+		fclose(in);
+
+		// Rename file to set as processed
+		string newPath = "";
+		ProtocolUtil::CreateFileNameProcessed(&newPath, tokens);
+		cFileManager.renameFile(path, newPath);
+	}
 }
 
 int Protocol::Project2Protocol(uint32_t projeto)

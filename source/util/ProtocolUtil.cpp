@@ -298,7 +298,19 @@ double ParseLongitude(string operacao, int xAxis, int complemento)
 	}
 
 	return longitude;
+}
 
+void CreateFileNameProcessed(string *newPath, std::vector<std::string> tokens)
+{
+	for(std::vector<int>::size_type i = 1; i != tokens.size(); i++)
+	{
+		if(i == tokens.size() - 1)
+			newPath->append("/p_").append(tokens[i]);
+		else
+			newPath->append("/").append(tokens[i]);
+	}
+
+	Info(TAG "Renamed processed file: %s", newPath->c_str());
 }
 
 }} // namespace

@@ -13,36 +13,42 @@
 #include "IFile.h"
 
 namespace bluetec {
-/*
- * Classe utilizada para manipular arquivos.
- */
+
 class File : public IFile
 {
 	public:
 
 		File();
 		virtual ~File();
+
 		/*
-		 * Define o Path default.
+		 * Set default path
 		 */
 		virtual void setPath(std::string path);
+
 		/*
-		 * Salva o buffer em um arquivo.
+		 * Save buffer at a file
 		 */
 		virtual void saveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile);
+
 		/*
-		 * Retorna o arquivo em um buffer.
+		 * Return file in a buffer
 		 */
 		virtual bool getBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeBufferFile);
+
 		/*
-		 * Remove fisicamente o arquivo.
+		 * Remove file from disk
 		 */
 		virtual void delFile(std::string pathFile);
+
 		/*
-		 * Retorna o tamanho do arquivo.
+		 * Rename file at disk
 		 */
 		virtual void renameFile(std::string pathFileOld, std::string pathFileNew);
 
+		/*
+		 * Return file size
+		 */
 		virtual uint32_t getSizeFile(uint32_t veioid, std::string nameFile);
 
 		virtual void createDir(std::string directory);
