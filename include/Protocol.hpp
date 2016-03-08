@@ -102,6 +102,7 @@ class Protocol {
 		void ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo);
 		void ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo);
 		void ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim);
+		void ParseHSYNC(string hsync);
 
 	public:
 		static char nome_projeto[50];
@@ -132,6 +133,14 @@ class Protocol {
 		pacote_posicao::bluetec400 cBluetecPacote;
 		pacote_posicao::pacote_enriquecido *pPacote;
 		bool bHasLastPosition;
+		uint32_t iLastPositionVehicle;
+		const int iLapsoSize;
+		cache_cadastro cad;
+		std::string sSerializedData;
+		pacote_posicao::equip_flags *pEventFlag;
+		pacote_posicao::equip_posicao *pPosition;
+		pacote_posicao::t_telemetria_bluetec400 *pTelemetry;
+		pacote_posicao::t32_odo_vel *pOdoVelGPS;
 };
 
 }

@@ -1,4 +1,3 @@
-
 #include "Protocol.hpp"
 #include "util/ProtocolUtil.hpp"
 #include <time.h>
@@ -22,17 +21,14 @@
 namespace Sascar
 {
 
-std::string serializado;
-pacote_posicao::equip_flags *eventoflag;
-pacote_posicao::equip_posicao *posicao;
-static int lapsoSize = sizeof(long int) + sizeof(double) * 6 + sizeof(int) * 13 + 16;
-pacote_posicao::t_telemetria_bluetec400 *telemetria;
-cache_cadastro cad;
-pacote_posicao::t32_odo_vel *odo_vel_gps;
-
-uint32_t getVeioid()
+Protocol::Protocol()
+	: bHasLastPosition(false)
+	, iLapsoSize(sizeof(long int) + sizeof(double) * 6 + sizeof(int) * 13 + 16)
 {
-	return cad.veioid;
+}
+
+Protocol::~Protocol()
+{
 }
 
 void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo)
@@ -99,12 +95,12 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	//hfull.reservado10;
 	//hfull.hfull[5];
 
-	cFileManager.saveHfull(getVeioid(), hfull);
+	cFileManager.saveHfull(cad.veioid, hfull);
 
 	Dbg(TAG "Fixing file cursor before and after HFULL");
 
 	// Verify case something matches at the end of this HFULL
-	if(cFileManager.getBufferFile( getVeioid(), ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
+	if(cFileManager.getBufferFile(cad.veioid, ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
 			header.beginPointer == ponteiroFim + 1 &&
 			(header.dataType == bluetec::enumDataType::DADOS ||
 			header.dataType == bluetec::enumDataType::DADOS_FINAL ||
@@ -113,18 +109,18 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 		Dbg(TAG "HFULL + TEMP");
 
 		// Remove this to overwrite it
-		cFileManager.delFile(getVeioid(), header.headerFile);
+		cFileManager.delFile(cad.veioid, header.headerFile);
 
 		// Update the start cursor
 		header.beginPointer -= 512;
 
 		// Save changes
 		Dbg(TAG "Saving buffer file header data type %d", /*dec, */ header.dataType);
-		cFileManager.saveBufferFile(getVeioid(), tBuffer, tSize, header);
+		cFileManager.saveBufferFile(cad.veioid, tBuffer, tSize, header);
 	}
 
 	// Verify case something matches at the start of this HFULL
-	if(cFileManager.getBufferFile(getVeioid(), ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
+	if(cFileManager.getBufferFile(cad.veioid, ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
 			header.endPointer == ponteiroIni - 1 &&
 			(header.dataType == bluetec::enumDataType::DADOS ||
 			header.dataType == bluetec::enumDataType::HSYNS ||
@@ -133,20 +129,19 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 		Dbg(TAG "TEMP + HFULL");
 
 		// Remove this to overwrite it
-		cFileManager.delFile(getVeioid(), header.headerFile);
+		cFileManager.delFile(cad.veioid, header.headerFile);
 
 		// Update the end cursor
 		header.endPointer += 512;
 
 		// Save changes
 		Dbg(TAG "Saving buffer file header data type %d", /*dec, */ header.dataType);
-		cFileManager.saveBufferFile(getVeioid(), tBuffer, tSize, header);
+		cFileManager.saveBufferFile(cad.veioid, tBuffer, tSize, header);
 	}
 }
 
-void parseHSYNC(string hsync)
+void Protocol::ParseHSYNC(string hsync)
 {
-
 }
 
 void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
@@ -159,7 +154,7 @@ void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
 	Dbg(TAG "Searching the start point in this route");
 
 	// Case something matches with the start of this route
-	if(cFileManager.getBufferFile(getVeioid(), ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
+	if(cFileManager.getBufferFile(cad.veioid, ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
 			header.endPointer == ponteiroIni - 1 && header.file == arquivo)
 	{
 		Dbg(TAG "This route has a start point");
@@ -168,20 +163,20 @@ void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
 		{
 			case bluetec::enumDataType::HSYNS_DADOS:
 				Dbg(TAG "Route completed, removing from temp memory");
-				cFileManager.delFile( getVeioid(), header.headerFile );
+				cFileManager.delFile(cad.veioid, header.headerFile);
 			break;
 
 			case bluetec::enumDataType::DADOS:
 				Dbg(TAG "Route incomplete, increasing end route point");
 
 				// Remove this temp file to overwrite it
-				cFileManager.delFile(getVeioid(), header.headerFile);
+				cFileManager.delFile(cad.veioid, header.headerFile);
 
 				// Update the data type
 				header.dataType = bluetec::enumDataType::DADOS_FINAL;
 
 				// Save it
-				cFileManager.saveBufferFile(getVeioid(), tBuffer, tSize, header);
+				cFileManager.saveBufferFile(cad.veioid, tBuffer, tSize, header);
 			break;
 		}
 	}
@@ -193,7 +188,7 @@ void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
 		header.dataType = bluetec::enumDataType::FINAL;
 
 		Dbg(TAG "Save buffer file header data type");
-		cFileManager.saveBufferFile(getVeioid(), tBuffer, (uint32_t)0, header);
+		cFileManager.saveBufferFile(cad.veioid, tBuffer, (uint32_t)0, header);
 	}
 }
 
@@ -271,7 +266,7 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	Dbg(TAG "Save buffer file Enum data type %d", /*dec,*/ bluetec::enumDataType::HSYNS);
 
 	Dbg(TAG "IMC 2 - header.dataType = %d", header.dataType);
-	cFileManager.saveBufferFile(getVeioid(), pLapso.c_str(), pLapso.length(), header);
+	cFileManager.saveBufferFile(cad.veioid, pLapso.c_str(), pLapso.length(), header);
 }
 
 void Protocol::CreatePosition()
@@ -360,14 +355,14 @@ void Protocol::CreatePosition()
 	}
 	catch(std::exception &e)
 	{
-		Log(TAG "%s", e.what());
+		Error(TAG "Error on insert/update data at mongo: %s", e.what());
 	}
 }
 
 bool Protocol::HasLastPosition(int vehicleId)
 {
 	// Use a cached var to evade query execute
-	if(bHasLastPosition)
+	if(bHasLastPosition && iLastPositionVehicle == vehicleId)
 		return true;
 
 	mongo::Query query = QUERY("veiculo" << vehicleId);
@@ -381,6 +376,7 @@ bool Protocol::HasLastPosition(int vehicleId)
 	{
 		// Set a cache value to not execute the query all the time
 		bHasLastPosition = true;
+		iLastPositionVehicle = vehicleId;
 		return bHasLastPosition;
 	}
 	else
@@ -453,7 +449,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	Dbg(TAG "Processing data %d %d...", ponteiroIni, ponteiroFim);
 	Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)dados.at(0)), hex, setw(2), setfill('0'), int((unsigned char)dados.at(dados.length()-1)));
 
-	if(!cFileManager.getHfull(getVeioid(), hfull))
+	if(!cFileManager.getHfull(cad.veioid, hfull))
 	{
 		hfull.lapso = bluetec::enumDefaultValues::LAPSO;
 		hfull.acely = bluetec::enumDefaultValues::ACELY;
@@ -464,7 +460,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	Dbg(TAG "Searching data before this file...");
 
 	// Case some data exists
-	if(cFileManager.getBufferFile(getVeioid(), ponteiroIni-1, arquivo, tBuffer, tSize, header) &&
+	if(cFileManager.getBufferFile(cad.veioid, ponteiroIni-1, arquivo, tBuffer, tSize, header) &&
 			header.endPointer == ponteiroIni-1 && header.file == arquivo)
 	{
 		Dbg(TAG "Found with type %d", header.dataType);
@@ -484,7 +480,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 				tipoDado = bluetec::enumDataType::HSYNS_DADOS;
 
 				// Clean the temporary lapse
-				cFileManager.delFile(getVeioid(), header.headerFile);
+				cFileManager.delFile(cad.veioid, header.headerFile);
 			break;
 
 			case bluetec::enumDataType::DADOS:
@@ -492,7 +488,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 				dados = string(tBuffer) + dados;
 
 				// Clean file temporarily to overwrite it
-				cFileManager.delFile( getVeioid(), header.headerFile );
+				cFileManager.delFile(cad.veioid, header.headerFile);
 				tipoDado = bluetec::enumDataType::DADOS;
 			break;
 		}
@@ -501,7 +497,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	Dbg(TAG "Searching data after this file...");
 
 	// Case some data exists
-	if(cFileManager.getBufferFile(getVeioid(), ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
+	if(cFileManager.getBufferFile(cad.veioid, ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
 			header.beginPointer == ponteiroFim + 1 &&	header.file == arquivo)
 	{
 		// Data + Temp
@@ -519,7 +515,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 				dados = dados + string(tBuffer);
 
 				// Clean file temporarily to overwrite it
-				cFileManager.delFile(getVeioid(), header.headerFile);
+				cFileManager.delFile(cad.veioid, header.headerFile);
 				tipoDado = bluetec::enumDataType::DADOS;
 			break;
 
@@ -530,7 +526,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 					dados = dados + string(tBuffer);
 
 				// Clean file temporarily to overwrite it
-				cFileManager.delFile( getVeioid(), header.headerFile );
+				cFileManager.delFile(cad.veioid, header.headerFile);
 
 				// Verify if has an opened route
 				if(tipoDado != bluetec::enumDataType::DADOS)
@@ -552,7 +548,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		header.dataType = tipoDado;
 
 		Dbg(TAG "Save buffer file header data type %d", header.dataType);
-		cFileManager.saveBufferFile(getVeioid(), dados.c_str(), dados.length(), header);
+		cFileManager.saveBufferFile(cad.veioid, dados.c_str(), dados.length(), header);
 	}
 	else if(tipoDado)
 	{
@@ -679,26 +675,26 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 								Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
 								// Setting data to position package
-								posicao = pPacote->mutable_ep();
-								posicao->set_lat2(lat);
-								posicao->set_long2(lon);
-								posicao->set_datahora(lapso.timestamp);
+								pPosition = pPacote->mutable_ep();
+								pPosition->set_lat2(lat);
+								pPosition->set_long2(lon);
+								pPosition->set_datahora(lapso.timestamp);
 								//	posicao->set_datachegada(lapso.timestamp);
-								posicao->set_datachegada(pTimer->GetCurrentTime());
+								pPosition->set_datachegada(pTimer->GetCurrentTime());
 
-								eventoflag = posicao->mutable_eventoflag();
+								pEventFlag = pPosition->mutable_eventoflag();
 
 								if(lapso.rpm > 0 && lapso.velocidade > 0)
-									eventoflag->set_ignicao(1);
+									pEventFlag->set_ignicao(1);
 								else
-									eventoflag->set_ignicao(0);
+									pEventFlag->set_ignicao(0);
 
-								odo_vel_gps = posicao->mutable_odo_vel_gps();
-								odo_vel_gps->set_velocidade(lapso.velocidade);
+								pOdoVelGPS = pPosition->mutable_odo_vel_gps();
+								pOdoVelGPS->set_velocidade(lapso.velocidade);
 
 								Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
 								Dbg(TAG "Position found, sending package with %d lapses of %d bytes",
-									sizePacote / lapsoSize, lapsoSize);
+									sizePacote / iLapsoSize, iLapsoSize);
 
 								// Send position package to queue in final protobuf format
 								//bluetecPacote.SerializeToString(&serializado);
@@ -738,11 +734,11 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 					index++;
 
 					// Validates package size
-					sizePacote += lapsoSize;
+					sizePacote += iLapsoSize;
 
 					if(sizePacote > maxSizePacote)
 					{
-						Dbg(TAG "Maximum size reached, sending package with %d lapses with %d bytes", sizePacote / lapsoSize, lapsoSize);
+						Dbg(TAG "Maximum size reached, sending package with %d lapses with %d bytes", sizePacote / iLapsoSize, iLapsoSize);
 
 						// Send case overlaps the size
 						//bluetecPacote.SerializeToString(&serializado);
@@ -752,12 +748,12 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 						cBluetecPacote.clear_tb();
 
 						// Reset the value of package with the size of lapse
-						sizePacote = lapsoSize;
+						sizePacote = iLapsoSize;
 					}
 					else
 					{
-						telemetria = cBluetecPacote.add_tb();
-						Sascar::ProtocolUtil::LapsoToTelemetria(telemetria, lapso);
+						pTelemetry = cBluetecPacote.add_tb();
+						Sascar::ProtocolUtil::LapsoToTelemetria(pTelemetry, lapso);
 					}
 					lapso.timestamp += hfull.lapso;
 				}
@@ -787,19 +783,9 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			string pLapso = Sascar::ProtocolUtil::PersistableLapso(&lapso);
 
 			Dbg(TAG "Save buffer file header data type %d", header.dataType);
-			cFileManager.saveBufferFile(getVeioid(), pLapso.c_str(), pLapso.length(), header);
+			cFileManager.saveBufferFile(cad.veioid, pLapso.c_str(), pLapso.length(), header);
 		}
 	}
-}
-
-Protocol::Protocol()
-	: bHasLastPosition(false)
-{
-}
-
-Protocol::~Protocol()
-{
-
 }
 
 void Protocol::GetClientData(cache_cadastro &retorno, std::string chave)
