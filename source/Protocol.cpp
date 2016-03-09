@@ -22,7 +22,7 @@ namespace Sascar
 {
 
 Protocol::Protocol()
-	: bHasLastPosition(false)
+	: iLastPositionDate(false)
 	, iLapsoSize(sizeof(long int) + sizeof(double) * 6 + sizeof(int) * 13 + 16)
 {
 }
@@ -343,15 +343,22 @@ void Protocol::CreatePosition()
 		// Insert json data at posicao
 		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataPosJSON);
 
+		// Get last position
+		uint64_t lastPositionDate = GetLastPosition(vehicle, lastPositionDate);
+
 		// Insert/Update data at ultima_posicao
-		if(!HasLastPosition(vehicle))
+		if(lastPositionDate == 0)
 		{
+			Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
 			pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataPosJSON);
 		}
-		else
+		else if(lastPositionDate < datePosition)
 		{
+			Dbg(TAG "Updating position at mongodb collection ultima_posicao");
 			UpdateLastPosition(vehicle);
 		}
+		else
+			Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
 	}
 	catch(std::exception &e)
 	{
@@ -359,11 +366,11 @@ void Protocol::CreatePosition()
 	}
 }
 
-bool Protocol::HasLastPosition(int vehicleId)
+uint64_t Protocol::GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate)
 {
 	// Use a cached var to evade query execute
-	if(bHasLastPosition && iLastPositionVehicle == vehicleId)
-		return true;
+	if(iLastPositionDate == lastPositionDate && iLastPositionVehicle == vehicleId)
+		return iLastPositionDate;
 
 	mongo::Query query = QUERY("veiculo" << vehicleId);
 
@@ -374,13 +381,17 @@ bool Protocol::HasLastPosition(int vehicleId)
 	// Verify if it has a register at collection
 	if(cursor->more() > 0)
 	{
+		mongo::BSONObj query_res = cursor->next();
+		mongo::Date_t positionDate = query_res.getField("data_posicao").date();
+
 		// Set a cache value to not execute the query all the time
-		bHasLastPosition = true;
+		iLastPositionDate = positionDate.millis;
 		iLastPositionVehicle = vehicleId;
-		return bHasLastPosition;
+
+		return positionDate.millis;
 	}
 	else
-		return false;
+		return 0;
 }
 
 void Protocol::UpdateLastPosition(int vehicleId)
@@ -1090,16 +1101,14 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					if(inicio < i - lHsync)
 					{
 						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, i - lHsync - 1);
-						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - lHsync - 1)));
+						//Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)), hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - lHsync - 1)));
 
 						inicio = i - lHsync;
 					}
 					if( inicio == i -  lHsync)
 					{
 						Dbg(TAG "Creating file of type 2 from %d a %d", inicio, i - 1);
-						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
+						//Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)), hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
 
 						// Parse data
 						//parseHSYNC( sbt4.substr( i - 21, 26 ) );

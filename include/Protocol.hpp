@@ -91,7 +91,7 @@ class Protocol {
 	private:
 		int Project2Protocol(uint32_t projeto);
 		void CreatePosition();
-		bool HasLastPosition(int vehicleId);
+		uint64_t GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate);
 		void UpdateLastPosition(int vehicleId);
 		void GetClientData(cache_cadastro &retorno, std::string chave);
 		uint32_t GetClient(std::string clientName);
@@ -132,7 +132,7 @@ class Protocol {
 		bluetec::BlueTecFileManager cFileManager;
 		pacote_posicao::bluetec400 cBluetecPacote;
 		pacote_posicao::pacote_enriquecido *pPacote;
-		bool bHasLastPosition;
+		uint64_t iLastPositionDate;
 		uint32_t iLastPositionVehicle;
 		const int iLapsoSize;
 		cache_cadastro cad;
