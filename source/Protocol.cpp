@@ -25,11 +25,11 @@ Protocol::Protocol()
 	: iLastPositionDate(false)
 	, iLapsoSize(sizeof(long int) + sizeof(double) * 6 + sizeof(int) * 13 + 16)
 {
-	pPacote = &cBluetecPacote.pacoteEnriquecido;
+	pPacote = &cBluetecPacote.data;
 	pTelemetry = &cBluetecPacote.telemetry;
 
-	pPosition = &pPacote->equipPosicao;
-	pEventFlag = &pPosition->eventoflag;
+	pPosition = &pPacote->position;
+	pEventFlag = &pPosition->flag;
 	pOdoVelGPS = &pPosition->odo_vel_gps;
 }
 
@@ -797,7 +797,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	}
 }
 
-void Protocol::GetClientData(cache_cadastro &retorno, std::string chave)
+void Protocol::GetClientData(DataCache &retorno, std::string chave)
 {
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
@@ -944,7 +944,7 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 	return pMysqlConnector->InsertedID();
 }
 
-void Protocol::FillDataContract(std::string clientName, std::string plate, cache_cadastro &retorno)
+void Protocol::FillDataContract(std::string clientName, std::string plate, DataCache &retorno)
 {
 	// Use a local cache to avoid access mysql db
 	if(retorno.placa.compare(plate) != 0)

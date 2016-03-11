@@ -25,7 +25,7 @@ using namespace std;
 
 namespace Sascar { namespace Bluetec400 {
 
-	struct cache_cadastro {
+	struct DataCache {
 		uint64_t esn;
 		uint64_t id;
 		uint64_t antena_int;
@@ -55,7 +55,7 @@ namespace Sascar { namespace Bluetec400 {
 		std::string clientName;
 	};
 
-	struct EquipContrato
+	struct Contract
 	{
 		uint64_t esn;
 		uint32_t clioid;
@@ -104,7 +104,7 @@ namespace Sascar { namespace Bluetec400 {
 		uint32_t velocidade;
 	};
 
-	struct EquipFlags
+	struct EventFlag
 	{
 		uint32_t bloqueio;
 		uint32_t alerta_int;
@@ -125,7 +125,7 @@ namespace Sascar { namespace Bluetec400 {
 		uint32_t anti_theft;
 	};
 
-	struct EquipPosicao
+	struct Position
 	{
 		uint32_t datahora;
 		uint32_t datachegada;
@@ -160,18 +160,18 @@ namespace Sascar { namespace Bluetec400 {
 		uint32_t ang_ref;
 		uint32_t rota;
 		uint32_t operacao;
-		EquipFlags eventoflag;
+		EventFlag eventFlag;
 	};
 
-	struct PacoteEnriquecido
+	struct Data
 	{
-		EquipContrato equipContrato;
-		EquipPosicao equipPosicao;
+		Contract contract;
+		Position position;
 	};
 
-	struct Bluetec400
+	struct Package
 	{
-		PacoteEnriquecido pacoteEnriquecido;
+		Data data;
 		Telemetry telemetry;
 
 		void Clear()

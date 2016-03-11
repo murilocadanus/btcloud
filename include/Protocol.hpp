@@ -22,14 +22,14 @@ class Protocol
 		Protocol();
 		virtual ~Protocol();
 		void Process(const char *path, int len, mongo::DBClientConnection *dbClient);
-		void FillDataContract(string clientName, std::string plate, cache_cadastro &retorno);
+		void FillDataContract(string clientName, std::string plate, DataCache &retorno);
 		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo);
 
 	private:
 		void CreatePosition();
 		uint64_t GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate);
 		void UpdateLastPosition(int vehicleId);
-		void GetClientData(cache_cadastro &retorno, std::string chave);
+		void GetClientData(DataCache &retorno, std::string chave);
 		uint32_t GetClient(std::string clientName);
 		uint32_t CreateClient(std::string clientName);
 		uint32_t CreateEquipment(uint32_t projectId, uint32_t equipIMei);
@@ -71,13 +71,13 @@ class Protocol
 		const int iLapsoSize;
 		std::string sSerializedData;
 
-		cache_cadastro cad;
-		Bluetec400::Bluetec400 cBluetecPacote;
-		PacoteEnriquecido *pPacote;
-		EquipPosicao *pPosition;
-		EquipFlags *pEventFlag;
+		DataCache cad;
+		Package cPackage;
+		Data *pData;
+		Position *pPosition;
+		EventFlag *pEventFlag;
 		Telemetry *pTelemetry;
-		OdoVel *pOdoVelGPS;
+		OdoVel *pOdoVel;
 };
 
 }
