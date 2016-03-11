@@ -19,7 +19,7 @@
 
 #define TAG "[File] "
 
-namespace bluetec {
+namespace Bluetec {
 
 File::File()
 {
@@ -35,7 +35,7 @@ File::~File()
 	}
 }
 
-void File::setPath(std::string path)
+void File::SetPath(std::string path)
 {
 	this->path = path;
 
@@ -72,7 +72,7 @@ void File::setPath(std::string path)
 	}
 }
 
-void File::createDir(std::string directory)
+void File::CreateDir(std::string directory)
 {
 	Info(TAG "Creating directory %s", directory.c_str());
 
@@ -87,7 +87,7 @@ void File::createDir(std::string directory)
 	}
 }
 
-void File::saveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile)
+void File::SaveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile)
 {
 	if(this->dirPath == NULL) throw PathNotDefinedException();
 
@@ -118,7 +118,7 @@ void File::saveBufferFile(std::string pathFile, const char *bufferFile, uint32_t
 	}
 }
 
-bool File::getBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeBufferFile)
+bool File::GetBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeBufferFile)
 {
 	bool retorno = false;
 
@@ -149,7 +149,7 @@ bool File::getBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeB
 	return retorno;
 }
 
-uint32_t File::getSizeFile(uint32_t veioid, std::string pathFile)
+uint32_t File::GetSizeFile(uint32_t veioid, std::string pathFile)
 {
 	struct stat st;
 
@@ -173,7 +173,7 @@ uint32_t File::getSizeFile(uint32_t veioid, std::string pathFile)
 	}
 }
 
-void File::renameFile(std::string pathFileOld, std::string pathFileNew)
+void File::RenameFile(std::string pathFileOld, std::string pathFileNew)
 {
 	Info(TAG "Rename file: %s to %s", pathFileOld.c_str(), pathFileNew.c_str());
 
@@ -185,7 +185,7 @@ void File::renameFile(std::string pathFileOld, std::string pathFileNew)
 	}
 }
 
-void File::delFile(std::string pathFile)
+void File::DelFile(std::string pathFile)
 {
 	std::stringstream del;
 	del << this->path << "/" << pathFile;

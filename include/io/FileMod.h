@@ -18,56 +18,110 @@
 #define FILEMOD_H_
 #include "IFile.h"
 
-namespace bluetec {
+using namespace std;
 
+namespace Bluetec {
+
+/** \class FileMod
+ *  \brief This class specializes the persistence of files at disk.
+ */
 class FileMod
 {
 	public:
+		/** \brief FileMod - Default constructor. */
 		FileMod();
-		~FileMod();
-		void setPath(std::string path);
 
-		/*
-		 * Save buffer file from veioid
+		/** \brief ~FileMod - Default destructor. */
+		virtual ~FileMod();
+
+		/** \brief SetPath - Set default path.
+		 *
+		 * \param path string
+		 * \return void
 		 */
-		void saveBufferFileVeioid(uint32_t veioid, const char *bufferFile, int sizeBufferFile, std::string nameFile);
+		void SetPath(string path);
 
-		/*
-		 * Return file buffer from veioid
+		/** \brief SaveBufferFileVeioid - Save buffer file from veioid.
+		 *
+		 * \param veioid uint32_t
+		 * \param bufferFile const char*
+		 * \param sizeBufferFile int
+		 * \param nameFile string
+		 * \return void
 		 */
-		bool getBufferFileVeioid(uint32_t veioid, std::string nameFile, char *bufferFile, uint32_t& sizeBufferFile);
+		void SaveBufferFileVeioid(uint32_t veioid, const char *bufferFile, int sizeBufferFile, string nameFile);
 
-		/*
-		 * Remove file from veioid
+		/** \brief GetBufferFileVeioId - Return file buffer from veioid.
+		 *
+		 * \param veioid uint32_t
+		 * \param nameFile string
+		 * \param bufferFile char*
+		 * \param sizeBufferFile uint32_t&
+		 * \return bool
 		 */
-		void delFileVeioid(uint32_t veioid, std::string nameFile);
+		bool GetBufferFileVeioId(uint32_t veioid, string nameFile, char *bufferFile, uint32_t& sizeBufferFile);
 
-		/*
-		 * Rename file at disk
+		/** \brief DelFileVeioId - Remove file from veioid.
+		 *
+		 * \param veioid uint32_t
+		 * \param nameFile string
+		 * \return void
 		 */
-		void renameFile(std::string pathFileOld, std::string pathFileNew);
+		void DelFileVeioId(uint32_t veioid, string nameFile);
 
-		void saveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile);
-
-		bool getBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeBufferFile);
-
-		/*
-		 * Set the value to calculate veioid
+		/** \brief RenameFile - Rename file at disk.
+		 *
+		 * \param pathFileOld string
+		 * \param  pathFileNew string
+		 * \return void
 		 */
-		void setMod(uint32_t mod);
+		void RenameFile(string pathFileOld, string pathFileNew);
 
-		/*
-		 * Set the pointer to IFile
+		/** \brief RenameFile - Rename file at disk.
+		 *
+		 * \param pathFile string
+		 * \param bufferFile const char*
+		 * \param sizeBufferFile uint32_t
+		 * \return void
 		 */
-		uint32_t getSizeFile(uint32_t veioid, std::string nameFile);
+		void SaveBufferFile(string pathFile, const char *bufferFile, uint32_t sizeBufferFile);
 
+		/** \brief RenameFile - Get Buffer file.
+		 *
+		 * \param pathFile string
+		 * \param bufferFile char*
+		 * \param sizeBufferFile uint32_t&
+		 * \return bool
+		 */
+		bool GetBufferFile(string pathFile, char *bufferFile, uint32_t& sizeBufferFile);
+
+		/** \brief SetMod - Set the value to calculate veioid.
+		 *
+		 * \param mod uint32_t
+		 * \return void
+		 */
+		void SetMod(uint32_t mod);
+
+		/** \brief GetSizeFile - Get the size of a IFile.
+		 *
+		 * \param veioid uint32_t
+		 * \param nameFile string
+		 * \return uint32_t
+		 */
+		uint32_t GetSizeFile(uint32_t veioid, string nameFile);
+
+		/** \brief GetSizeFile - Set the pointer to IFile.
+		 *
+		 * \param file IFile*
+		 * \return void
+		 */
 		void setFile(IFile *file);
 
 	private:
 		IFile *file;
 		uint32_t mod;
-		std::string getIndice(uint32_t veioid);
-		std::string getDirectory(uint32_t veioid);
+		string getIndice(uint32_t veioid);
+		string getDirectory(uint32_t veioid);
 };
 
 } // namespace

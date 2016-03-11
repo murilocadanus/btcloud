@@ -18,13 +18,16 @@
 #include <stdint.h>
 #include <vector>
 
-#ifndef BLUETEC
-#define BLUETEC
+#ifndef PACKAGE
+#define PACKAGE
 
 using namespace std;
 
-namespace Sascar { namespace Bluetec400 {
+namespace BTCloud { namespace Entities {
 
+	/** \class DataCache
+	 *  \brief This entity is a cache for default data.
+	 */
 	struct DataCache {
 		uint64_t esn;
 		uint64_t id;
@@ -55,6 +58,9 @@ namespace Sascar { namespace Bluetec400 {
 		std::string clientName;
 	};
 
+	/** \class Contract
+	 *  \brief This entity has a contract information.
+	 */
 	struct Contract
 	{
 		uint64_t esn;
@@ -73,6 +79,9 @@ namespace Sascar { namespace Bluetec400 {
 		uint32_t vehicleType;
 	};
 
+	/** \class Telemetry
+	 *  \brief This entity has a telemetry information.
+	 */
 	struct Telemetry
 	{
 		uint32_t stretch;
@@ -98,12 +107,18 @@ namespace Sascar { namespace Bluetec400 {
 		string operation;
 	};
 
+	/** \class OdoVel
+	 *  \brief This entity has a distace and time information.
+	 */
 	struct OdoVel
 	{
 		uint32_t odometer;
 		uint32_t velocity;
 	};
 
+	/** \class EventFlag
+	 *  \brief This entity has all alert flags.
+	 */
 	struct EventFlag
 	{
 		uint32_t block;
@@ -125,6 +140,9 @@ namespace Sascar { namespace Bluetec400 {
 		uint32_t antiTheft;
 	};
 
+	/** \class Position
+	 *  \brief This entity has all position data.
+	 */
 	struct Position
 	{
 		uint32_t dateTime;
@@ -163,24 +181,27 @@ namespace Sascar { namespace Bluetec400 {
 		EventFlag eventFlag;
 	};
 
+	/** \class Data
+	 *  \brief This entity contains contract and position information.
+	 */
 	struct Data
 	{
 		Contract contract;
 		Position position;
 	};
 
+	/** \class Package
+	 *  \brief This entity is a root access for all data.
+	 */
 	struct Package
 	{
 		Data data;
 		Telemetry telemetry;
 
-		void Clear()
-		{
-
-		}
+		void Clear(){}
 	};
 
 }} // namespace
 
-#endif // BLUETEC
+#endif // PACKAGE
 

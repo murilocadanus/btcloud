@@ -14,6 +14,8 @@
 
 using namespace std;
 
+namespace BTCloud {
+
 BTCloudApp::BTCloudApp()
 	: cDBConnection()
 {
@@ -73,4 +75,6 @@ bool BTCloudApp::Shutdown()
 	Info(TAG "Disconnected from mongodb");
 
 	return true;
+}
+
 }

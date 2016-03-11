@@ -4,9 +4,9 @@
 #define TAG "[ProtocolUtil] "
 
 
-namespace Sascar { namespace ProtocolUtil {
+namespace BTCloud { namespace Util {
 
-void LapsoSetup(string lapso, struct sLapso& setup)
+void LapsoSetup(string lapso, struct Lapse& setup)
 {
 	if(lapso.length() == 0)
 		return;
@@ -84,7 +84,7 @@ void LapsoSetup(string lapso, struct sLapso& setup)
 	Dbg(TAG "Index: %d ibtMotorista: %s", index, setup.ibtMotorista.c_str());
 }
 
-void LapsoToTelemetria(Bluetec400::Telemetry *tele, struct sLapso& lapso)
+void LapsoToTelemetria(Entities::Telemetry *tele, struct Lapse& lapso)
 {
 	tele->stretch = lapso.idTrecho;
 	tele->dateTime = lapso.timestamp;
@@ -110,7 +110,7 @@ void LapsoToTelemetria(Bluetec400::Telemetry *tele, struct sLapso& lapso)
 }
 
 // Transform a sLapse struct in a persistable text format
-string PersistableLapso(sLapso *l)
+string PersistableLapso(Lapse *l)
 {
 	if( l == NULL )
 	{
@@ -129,14 +129,14 @@ int TamanhoLapsoExpansao(char expansao)
 {
 	char buffer[255];
 	buffer[0] = expansao;
-	Sascar::ProtocolUtil::saidas *p;
-	p = (Sascar::ProtocolUtil::saidas* ) buffer;
+	BTCloud::Util::Output *p;
+	p = (BTCloud::Util::Output* ) buffer;
 
 	return (p->saida3 * 7) + p->saida4 + p->saida5 + p->saida6 + (p->saida7 * 2);
 }
 
 // Receive a struct with the binary output from control byte and calc lapse size
-int TamanhoLapsoExpansao(saidas *p)
+int TamanhoLapsoExpansao(Output *p)
 {
 	return (p->saida3 * 7) + p->saida4 + p->saida5 + p->saida6 + (p->saida7 * 2);
 }
@@ -146,8 +146,8 @@ int TamanhoLapso(char controle, char expansao)
 {
 	char buffer[255];
 	buffer[0] = controle;
-	saidas *p;
-	p = (saidas*) buffer;
+	Output *p;
+	p = (Output*) buffer;
 	int expLength = 0;
 
 	if(p->saida0)
@@ -158,7 +158,7 @@ int TamanhoLapso(char controle, char expansao)
 }
 
 // Receive a struct with the binary output from control byte and calc lapse size
-int TamanhoLapso(saidas *p)
+int TamanhoLapso(Output *p)
 {
 	return p->saida1 + p->saida2 + p->saida3 + p->saida4 + p->saida5;
 }

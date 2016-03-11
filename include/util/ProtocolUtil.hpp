@@ -19,13 +19,13 @@
 
 #include <string>
 #include <sstream>
-#include "entities/Bluetec400.hpp"
+#include "entities/ProtocolEntity.hpp"
 
 using namespace std;
 
-namespace Sascar { namespace ProtocolUtil {
+namespace BTCloud { namespace Util {
 
-	typedef struct saidas
+	typedef struct Output
 	{
 			unsigned int saida0 :1;
 			unsigned int saida1 :1;
@@ -35,9 +35,9 @@ namespace Sascar { namespace ProtocolUtil {
 			unsigned int saida5 :1;
 			unsigned int saida6 :1;
 			unsigned int saida7 :1;
-	}__attribute__ ((packed)) saidas;
+	}__attribute__ ((packed)) Output;
 
-	typedef struct sLapso
+	typedef struct Lapse
 	{
 			//long int timestamp
 			long int timestamp;
@@ -62,15 +62,15 @@ namespace Sascar { namespace ProtocolUtil {
 			int idTrecho;
 			std::string operacao;
 			std::string ibtMotorista;
-	} sLapso;
+	} Lapse;
 
-	void LapsoSetup(string lapso, struct sLapso& setup);
-	void LapsoToTelemetria(Bluetec400::Telemetry *tele, struct sLapso& lapso);
-	string PersistableLapso(sLapso *l);
+	void LapsoSetup(string lapso, struct Lapse& setup);
+	void LapsoToTelemetria(Entities::Telemetry *tele, struct Lapse& lapso);
+	string PersistableLapso(Lapse *l);
 	int TamanhoLapsoExpansao(char expansao);
-	int TamanhoLapsoExpansao(saidas *p);
+	int TamanhoLapsoExpansao(Output *p);
 	int TamanhoLapso(char controle, char expansao);
-	int TamanhoLapso(saidas *p);
+	int TamanhoLapso(Output *p);
 	int ParseBCDDecimal(unsigned char byte);
 	string ParseBCDString(unsigned char byte);
 	tm* ParseDataHora(string data);

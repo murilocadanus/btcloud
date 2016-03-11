@@ -18,7 +18,7 @@ HEADERS +=	\
 			include/io/SwapFile.h \
 			include/io/File.h \
 			include/util/ProtocolUtil.hpp \
-    include/entities/Bluetec400.hpp
+    include/entities/ProtocolEntity.hpp
 
 OTHER_FILES += resources/app.config \
 

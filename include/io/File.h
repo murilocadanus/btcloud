@@ -21,55 +21,89 @@
 #include <dirent.h>
 #include "IFile.h"
 
-namespace bluetec {
+using namespace std;
 
+namespace Bluetec {
+
+/** \class File
+ *  \brief This class represents the control of files at disk.
+ */
 class File : public IFile
 {
 	public:
 
+		/** \brief File - Default constructor. */
 		File();
+
+		/** \brief ~File - Default destructor. */
 		virtual ~File();
 
-		/*
-		 * Set default path
+		/** \brief SetPath - Set default path.
+		 *
+		 * \param path string
+		 * \return void
 		 */
-		virtual void setPath(std::string path);
+		virtual void SetPath(string path);
 
-		/*
-		 * Save buffer at a file
+		/** \brief SaveBufferFile - Save buffer at a file.
+		 *
+		 * \param pathFile string
+		 * \param bufferFile const char*
+		 * \param sizeBufferFile uint32_t
+		 * \return void
 		 */
-		virtual void saveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile);
+		virtual void SaveBufferFile(string pathFile, const char *bufferFile, uint32_t sizeBufferFile);
 
-		/*
-		 * Return file in a buffer
+		/** \brief GetBufferFile - Return file in a buffer.
+		 *
+		 * \param pathFile string
+		 * \param bufferFile char*
+		 * \param sizeBufferFile uint32_t&
+		 * \return bool
 		 */
-		virtual bool getBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeBufferFile);
+		virtual bool GetBufferFile(string pathFile, char *bufferFile, uint32_t& sizeBufferFile);
 
-		/*
-		 * Remove file from disk
+		/** \brief DelFile - Remove file from disk.
+		 *
+		 * \param pathFile string
+		 * \return void
 		 */
-		virtual void delFile(std::string pathFile);
+		virtual void DelFile(string pathFile);
 
-		/*
-		 * Rename file at disk
+		/** \brief RenameFile - Rename file at disk.
+		 *
+		 * \param pathFileOld string
+		 * \param pathFileNew string
+		 * \return void
 		 */
-		virtual void renameFile(std::string pathFileOld, std::string pathFileNew);
+		virtual void RenameFile(string pathFileOld, string pathFileNew);
 
-		/*
-		 * Return file size
+		/** \brief GetSizeFile - Return file size.
+		 *
+		 * \param veioid uint32_t
+		 * \param nameFile string
+		 * \return uint32_t
 		 */
-		virtual uint32_t getSizeFile(uint32_t veioid, std::string nameFile);
+		virtual uint32_t GetSizeFile(uint32_t veioid, string nameFile);
 
-		virtual void createDir(std::string directory);
+		/** \brief CreateDir - Create a specified directory.
+		 *
+		 * \param directory string
+		 * \return void
+		 */
+		virtual void CreateDir(string directory);
 
 	private:
-		std::string path;
+		/** Path of directory to be used */
+		string path;
+
+		/** Directory stream of objects*/
 		DIR *dirPath;
+
+		/** File descriptor for directory*/
 		int dirFd;
-
-
 };
 
-} /* namespace bluetec */
+} // namespace
 
 #endif /* FILE_H_ */

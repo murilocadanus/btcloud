@@ -28,9 +28,11 @@
 #include "Protocol.hpp"
 
 using namespace Sascar;
-using namespace bluetec;
+using namespace Bluetec;
 using namespace std;
 using namespace mongo;
+
+namespace BTCloud {
 
 /** \class BTCloudApp
  *  \brief Entry point for btcloud app.
@@ -72,5 +74,6 @@ class BTCloudApp : public IApp, public IEventFileSystemListener
 		Protocol cProtocol;
 
 };
+}
 
 #endif // BTCLOUD_APP_HPP

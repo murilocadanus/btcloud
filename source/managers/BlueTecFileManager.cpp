@@ -14,7 +14,7 @@
 
 #define TAG "[BlueTecFileManager] "
 
-namespace bluetec {
+namespace Bluetec {
 
 BlueTecFileManager::BlueTecFileManager()
 {
@@ -34,10 +34,10 @@ BlueTecFileManager::~BlueTecFileManager()
 
 void BlueTecFileManager::setPath(std::string path)
 {
-	this->files.setPath(path);
+	this->files.SetPath(path);
 }
 
-bool BlueTecFileManager::getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct sBluetecHeaderFile &bluetecHeaderFile)
+bool BlueTecFileManager::getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct HeaderDataFile &bluetecHeaderFile)
 {
 	bool retorno = false;
 
@@ -49,22 +49,22 @@ bool BlueTecFileManager::getBufferFile(uint32_t veioid, uint32_t pointer, uint16
 		nameFile << bluetecHeaderFile.headerFile.id;
 
 		// Search the file in the directory and return the buffer
-		retorno = this->files.getBufferFileVeioid(veioid, nameFile.str(), bufferFile, sizeBufferFile);
+		retorno = this->files.GetBufferFileVeioId(veioid, nameFile.str(), bufferFile, sizeBufferFile);
 	}
 
 	return retorno;
 }
 
 // Save buffer in a new file
-void BlueTecFileManager::saveBufferFile(uint32_t veioid, const char *bufferFile, uint32_t sizeBufferFile, struct sBluetecHeaderFile& bluetecHeaderFile)
+void BlueTecFileManager::saveBufferFile(uint32_t veioid, const char *bufferFile, uint32_t sizeBufferFile, struct HeaderDataFile& bluetecHeaderFile)
 {
 	auto duration = std::chrono::system_clock::now().time_since_epoch();
 	uint64_t nano = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
 
 	Dbg(TAG "%d", nano);
 
-	std::vector<struct sBluetecHeaderFile*> *vec = this->getListsBluetecHeaderFile(veioid);
-	struct sBluetecHeaderFile *header = new sBluetecHeaderFile();
+	std::vector<struct HeaderDataFile*> *vec = this->getListsBluetecHeaderFile(veioid);
+	struct HeaderDataFile *header = new HeaderDataFile();
 
 	*header = bluetecHeaderFile;
 	header->headerFile.id = nano; // file name
@@ -75,22 +75,22 @@ void BlueTecFileManager::saveBufferFile(uint32_t veioid, const char *bufferFile,
 	std::stringstream nameFile;
 	nameFile << header->headerFile.id;
 
-	this->files.saveBufferFileVeioid(veioid, bufferFile, sizeBufferFile, nameFile.str());
+	this->files.SaveBufferFileVeioid(veioid, bufferFile, sizeBufferFile, nameFile.str());
 	this->saveIndexFile(veioid, vec);
 	this->deleteIndexFileObject(vec);
 }
 
 void BlueTecFileManager::renameFile(std::string pathFileOld, std::string pathFileNew)
 {
-	this->files.renameFile(pathFileOld, pathFileNew);
+	this->files.RenameFile(pathFileOld, pathFileNew);
 }
 
 // Remove file
-void BlueTecFileManager::delFile(uint32_t veioid, sHeaderFile file)
+void BlueTecFileManager::delFile(uint32_t veioid, DataFile file)
 {
 	std::stringstream nameFile;
-	std::vector<struct sBluetecHeaderFile*>::iterator it;
-	std::vector<struct sBluetecHeaderFile*> *vec = this->getListsBluetecHeaderFile(veioid);
+	std::vector<struct HeaderDataFile*>::iterator it;
+	std::vector<struct HeaderDataFile*> *vec = this->getListsBluetecHeaderFile(veioid);
 
 	nameFile << file.id;
 
@@ -100,7 +100,7 @@ void BlueTecFileManager::delFile(uint32_t veioid, sHeaderFile file)
 		{
 			delete *it;
 			vec->erase(it);
-			this->files.delFileVeioid(veioid, nameFile.str());
+			this->files.DelFileVeioId(veioid, nameFile.str());
 			this->saveIndexFile(veioid, vec);
 			break;
 		}
@@ -110,13 +110,13 @@ void BlueTecFileManager::delFile(uint32_t veioid, sHeaderFile file)
 }
 
 // Return veioid header using a pointer and file
-bool BlueTecFileManager::getsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct sBluetecHeaderFile& bluetecHeaderFile)
+bool BlueTecFileManager::getsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct HeaderDataFile& bluetecHeaderFile)
 {
 	bool retorno = false;
 
-	std::vector<struct sBluetecHeaderFile*>::iterator it;
+	std::vector<struct HeaderDataFile*>::iterator it;
 
-	std::vector<struct sBluetecHeaderFile*> *vec = this->getListsBluetecHeaderFile(veioid);
+	std::vector<struct HeaderDataFile*> *vec = this->getListsBluetecHeaderFile(veioid);
 
 	for(it = vec->begin(); it != vec->end(); it++)
 	{
@@ -134,25 +134,25 @@ bool BlueTecFileManager::getsBluetecHeaderFile(uint32_t veioid, uint32_t pointer
 }
 
 // Return veiod header list
-std::vector<struct sBluetecHeaderFile*> *BlueTecFileManager::getListsBluetecHeaderFile(uint32_t veioid)
+std::vector<struct HeaderDataFile*> *BlueTecFileManager::getListsBluetecHeaderFile(uint32_t veioid)
 {
-	std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile = new std::vector<struct sBluetecHeaderFile*>();
-	struct sBluetecHeaderFile *pHeader, *he;
+	std::vector<struct HeaderDataFile*> *listBluetecHeaderFile = new std::vector<struct HeaderDataFile*>();
+	struct HeaderDataFile *pHeader, *he;
 	uint32_t sizeBufferFileHeader = 0, size;
 	char *bufferFileHeader = NULL;
 
 	try
 	{
-		size = this->files.getSizeFile(veioid, NAME_INDEX_FILE);
+		size = this->files.GetSizeFile(veioid, NAME_INDEX_FILE);
 		bufferFileHeader = new char[size];auto duration = std::chrono::system_clock::now().time_since_epoch();
 
-		if(this->files.getBufferFileVeioid(veioid, NAME_INDEX_FILE, bufferFileHeader, sizeBufferFileHeader))
+		if(this->files.GetBufferFileVeioId(veioid, NAME_INDEX_FILE, bufferFileHeader, sizeBufferFileHeader))
 		{
-			pHeader = (struct sBluetecHeaderFile*)bufferFileHeader;
+			pHeader = (struct HeaderDataFile*)bufferFileHeader;
 
-			while((pHeader - (struct sBluetecHeaderFile*)bufferFileHeader) * sizeof(sBluetecHeaderFile) < sizeBufferFileHeader)
+			while((pHeader - (struct HeaderDataFile*)bufferFileHeader) * sizeof(HeaderDataFile) < sizeBufferFileHeader)
 			{
-				he = new sBluetecHeaderFile();
+				he = new HeaderDataFile();
 				//std::cout << "Id: " << pHeader->id << " File: " << pHeader->file << " BeginPointer: " << pHeader->beginPointer << " EndPointer: " << pHeader->endPointer << " Timestamp: " << pHeader->timestamp << std::endl;
 				*he = *pHeader;
 				listBluetecHeaderFile->push_back(he);
@@ -178,31 +178,31 @@ std::vector<struct sBluetecHeaderFile*> *BlueTecFileManager::getListsBluetecHead
 }
 
 // Save changes at index
-void BlueTecFileManager::saveIndexFile(uint32_t veioid, std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile)
+void BlueTecFileManager::saveIndexFile(uint32_t veioid, std::vector<struct HeaderDataFile*> *listBluetecHeaderFile)
 {
-	struct sBluetecHeaderFile *ph;
+	struct HeaderDataFile *ph;
 
 	// Clean files
 	this->vacuum( veioid, listBluetecHeaderFile );
 
-	int size = listBluetecHeaderFile->size() * sizeof(struct sBluetecHeaderFile);
+	int size = listBluetecHeaderFile->size() * sizeof(struct HeaderDataFile);
 	char *buffer = new char[size];
-	ph = (struct sBluetecHeaderFile*) buffer;
+	ph = (struct HeaderDataFile*) buffer;
 
-	for(std::vector<struct sBluetecHeaderFile*>::iterator it = listBluetecHeaderFile->begin(); it != listBluetecHeaderFile->end(); it++)
+	for(std::vector<struct HeaderDataFile*>::iterator it = listBluetecHeaderFile->begin(); it != listBluetecHeaderFile->end(); it++)
 	{
-		memcpy(ph,(*it),sizeof(struct sBluetecHeaderFile));
+		memcpy(ph,(*it),sizeof(struct HeaderDataFile));
 		ph++;
 	}
 
-	this->files.saveBufferFileVeioid(veioid, buffer, size, NAME_INDEX_FILE);
+	this->files.SaveBufferFileVeioid(veioid, buffer, size, NAME_INDEX_FILE);
 
 	delete[] buffer;
 }
 
-void BlueTecFileManager::deleteIndexFileObject(std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile)
+void BlueTecFileManager::deleteIndexFileObject(std::vector<struct HeaderDataFile*> *listBluetecHeaderFile)
 {
-	std::vector<struct sBluetecHeaderFile*>::iterator it;
+	std::vector<struct HeaderDataFile*>::iterator it;
 	for(it = listBluetecHeaderFile->begin(); it != listBluetecHeaderFile->end(); it++)
 	{
 		delete *it;
@@ -217,7 +217,7 @@ uint32_t BlueTecFileManager::getNextIdTrecho()
 	uint32_t sizeBufferFile = 0, sequence = 0;
 
 	// Interface
-	if(this->files.getBufferFile(SEQUENCE_TRECHO, buffer, sizeBufferFile))
+	if(this->files.GetBufferFile(SEQUENCE_TRECHO, buffer, sizeBufferFile))
 	{
 		memcpy(&sequence, buffer, 4);
 		uint32_t tmp = sequence;
@@ -228,24 +228,24 @@ uint32_t BlueTecFileManager::getNextIdTrecho()
 		memcpy(buffer, &tmp, 4);
 
 		// Save changes
-		this->files.saveBufferFile(SEQUENCE_TRECHO, buffer, 4);
+		this->files.SaveBufferFile(SEQUENCE_TRECHO, buffer, 4);
 	}
 	else
 	{
 		// Create file if it not exist
-		this->files.saveBufferFile(SEQUENCE_TRECHO, buffer, 4);
+		this->files.SaveBufferFile(SEQUENCE_TRECHO, buffer, 4);
 	}
 
 	return sequence;
 }
 
-bool BlueTecFileManager::getHfull(uint32_t veioid, sHfull& hfull)
+bool BlueTecFileManager::getHfull(uint32_t veioid, HFull& hfull)
 {
 	bool retorno = false;
 	char buffer[255] = {0};
 	uint32_t sizeBufferFile = 0;
 
-	if(this->files.getBufferFileVeioid(veioid,NAME_HFULL_FILE, buffer, sizeBufferFile))
+	if(this->files.GetBufferFileVeioId(veioid,NAME_HFULL_FILE, buffer, sizeBufferFile))
 	{
 		memcpy(&hfull, buffer, sizeBufferFile);
 		retorno = true;
@@ -255,15 +255,15 @@ bool BlueTecFileManager::getHfull(uint32_t veioid, sHfull& hfull)
 
 }
 
-void BlueTecFileManager::saveHfull(uint32_t veioid, sHfull& hfull)
+void BlueTecFileManager::saveHfull(uint32_t veioid, HFull& hfull)
 {
-	this->files.saveBufferFileVeioid(veioid,(char*)&hfull,sizeof(sHfull), NAME_HFULL_FILE);
+	this->files.SaveBufferFileVeioid(veioid,(char*)&hfull,sizeof(HFull), NAME_HFULL_FILE);
 }
 
-void BlueTecFileManager::vacuum(uint32_t veioid, std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile)
+void BlueTecFileManager::vacuum(uint32_t veioid, std::vector<struct HeaderDataFile*> *listBluetecHeaderFile)
 {
-	std::vector<struct sBluetecHeaderFile*>::iterator it;
-	std::vector<struct sBluetecHeaderFile*> listTemp;
+	std::vector<struct HeaderDataFile*>::iterator it;
+	std::vector<struct HeaderDataFile*> listTemp;
 
 	for(it = listBluetecHeaderFile->begin(); it != listBluetecHeaderFile->end(); it++)
 	{
@@ -278,7 +278,7 @@ void BlueTecFileManager::vacuum(uint32_t veioid, std::vector<struct sBluetecHead
 		}
 	}
 
-	for(sBluetecHeaderFile *i : listTemp)
+	for(HeaderDataFile *i : listTemp)
 	{
 		for(it = listBluetecHeaderFile->begin(); it != listBluetecHeaderFile->end(); it++)
 		{
@@ -288,7 +288,7 @@ void BlueTecFileManager::vacuum(uint32_t veioid, std::vector<struct sBluetecHead
 				nameFile << (*it)->headerFile.id;
 				delete *it;
 				listBluetecHeaderFile->erase(it);
-				this->files.delFileVeioid( veioid, nameFile.str() );
+				this->files.DelFileVeioId( veioid, nameFile.str() );
 				break;
 			}
 		}

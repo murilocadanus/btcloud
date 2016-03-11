@@ -7,7 +7,7 @@
 
 #include "io/SwapFile.h"
 
-namespace bluetec {
+namespace Bluetec {
 
 SwapFile::SwapFile()
 {
@@ -19,11 +19,11 @@ SwapFile::~SwapFile()
 
 }
 
-void SwapFile::saveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile)
+void SwapFile::SaveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile)
 {
 	std::string pathFileSwap = pathFile + "~";
-	File::saveBufferFile(pathFileSwap, bufferFile, sizeBufferFile);
-	this->renameFile(pathFileSwap, pathFile);
+	File::SaveBufferFile(pathFileSwap, bufferFile, sizeBufferFile);
+	this->RenameFile(pathFileSwap, pathFile);
 }
 
 /*
@@ -31,22 +31,22 @@ void SwapFile::saveBufferFile(std::string pathFile, const char *bufferFile, uint
  * o arquivo de swap foi truncado por algum motivo, logo o arquivo original
  * esta desatualizado.
  */
-bool SwapFile::getBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeBufferFile)
+bool SwapFile::GetBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeBufferFile)
 {
 	bool retorno = false;
 	std::string pathFileSwap = pathFile + "~";
-	retorno = File::getBufferFile(pathFileSwap, bufferFile, sizeBufferFile);
+	retorno = File::GetBufferFile(pathFileSwap, bufferFile, sizeBufferFile);
 
 	/* se existir o arquivo...*/
 	if(retorno && sizeBufferFile > 0)
 	{
 		/* Se tiver conteudo entao pode renomear... */
-		this->renameFile(pathFileSwap, pathFile);
+		this->RenameFile(pathFileSwap, pathFile);
 	}
 	else
 	{
 		/* se nao achou o swap entao abre o original... */
-		retorno = File::getBufferFile(pathFile, bufferFile, sizeBufferFile);
+		retorno = File::GetBufferFile(pathFile, bufferFile, sizeBufferFile);
 	}
 
 	return retorno;

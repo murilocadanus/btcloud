@@ -23,14 +23,14 @@
 #include <list>
 #include <string>
 #include "mongo/client/dbclient.h" // for the driver
-#include "entities/Bluetec400.hpp"
+#include "entities/ProtocolEntity.hpp"
 #include "managers/BlueTecFileManager.h"
 
 using namespace std;
 
-using namespace Sascar::Bluetec400;
+using namespace BTCloud::Entities;
 
-namespace Sascar {
+namespace BTCloud {
 
 /** \class Protocol
  *  \brief Class used to parse BT4 files and generate JSON output.
@@ -61,7 +61,7 @@ class Protocol
 
 	private:
 		mongo::DBClientConnection *pDBClientConnection;
-		bluetec::BlueTecFileManager cFileManager;
+		Bluetec::BlueTecFileManager cFileManager;
 		uint64_t iLastPositionDate;
 		uint32_t iLastPositionVehicle;
 		const int iLapsoSize;

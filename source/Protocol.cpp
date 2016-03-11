@@ -17,8 +17,9 @@
 
 #define TAG "[Protocol] "
 
+using namespace Sascar;
 
-namespace Sascar
+namespace BTCloud
 {
 
 Protocol::Protocol()
@@ -41,15 +42,15 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 {
 	Info(TAG "Init parse HFULL");
 
-	bluetec::sHfull hfull;
-	bluetec::sBluetecHeaderFile header;
+	Bluetec::HFull hfull;
+	Bluetec::HeaderDataFile header;
 	char tBuffer[500000];
 	uint32_t tSize;
 
 	char buffer[255];
 	buffer[0] = (unsigned char) strHfull.at(0);
-	Sascar::ProtocolUtil::saidas *p;
-	p = (Sascar::ProtocolUtil::saidas*) buffer;
+	BTCloud::Util::Output *p;
+	p = (BTCloud::Util::Output*) buffer;
 
 	hfull.lapso = 0;
 	hfull.lapso += p->saida0 * 1;
@@ -108,9 +109,9 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	// Verify case something matches at the end of this HFULL
 	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
 			header.beginPointer == ponteiroFim + 1 &&
-			(header.dataType == bluetec::enumDataType::DADOS ||
-			header.dataType == bluetec::enumDataType::DADOS_FINAL ||
-			header.dataType == bluetec::enumDataType::FINAL))
+			(header.dataType == Bluetec::enumDataType::DADOS ||
+			header.dataType == Bluetec::enumDataType::DADOS_FINAL ||
+			header.dataType == Bluetec::enumDataType::FINAL))
 	{
 		Dbg(TAG "HFULL + TEMP");
 
@@ -128,9 +129,9 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	// Verify case something matches at the start of this HFULL
 	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
 			header.endPointer == ponteiroIni - 1 &&
-			(header.dataType == bluetec::enumDataType::DADOS ||
-			header.dataType == bluetec::enumDataType::HSYNS ||
-			header.dataType == bluetec::enumDataType::HSYNS_DADOS))
+			(header.dataType == Bluetec::enumDataType::DADOS ||
+			header.dataType == Bluetec::enumDataType::HSYNS ||
+			header.dataType == Bluetec::enumDataType::HSYNS_DADOS))
 	{
 		Dbg(TAG "TEMP + HFULL");
 
@@ -153,7 +154,7 @@ void Protocol::ParseHSYNC(string hsync)
 void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
 {
 	// Search for route persisted with start cursor = 1 and remove it
-	bluetec::sBluetecHeaderFile header;
+	Bluetec::HeaderDataFile header;
 	char tBuffer[500000];
 	uint32_t tSize=0;
 
@@ -167,19 +168,19 @@ void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
 
 		switch(header.dataType)
 		{
-			case bluetec::enumDataType::HSYNS_DADOS:
+			case Bluetec::enumDataType::HSYNS_DADOS:
 				Dbg(TAG "Route completed, removing from temp memory");
 				cFileManager.delFile(dataCache.veioId, header.headerFile);
 			break;
 
-			case bluetec::enumDataType::DADOS:
+			case Bluetec::enumDataType::DADOS:
 				Dbg(TAG "Route incomplete, increasing end route point");
 
 				// Remove this temp file to overwrite it
 				cFileManager.delFile(dataCache.veioId, header.headerFile);
 
 				// Update the data type
-				header.dataType = bluetec::enumDataType::DADOS_FINAL;
+				header.dataType = Bluetec::enumDataType::DADOS_FINAL;
 
 				// Save it
 				cFileManager.saveBufferFile(dataCache.veioId, tBuffer, tSize, header);
@@ -191,7 +192,7 @@ void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
 		// Case this does not need to be saved temporarily
 		header.file = arquivo;
 		header.beginPointer = ponteiroIni;
-		header.dataType = bluetec::enumDataType::FINAL;
+		header.dataType = Bluetec::enumDataType::FINAL;
 
 		Dbg(TAG "Save buffer file header data type");
 		cFileManager.saveBufferFile(dataCache.veioId, tBuffer, (uint32_t)0, header);
@@ -202,8 +203,8 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 {
 	Dbg(TAG "Init HSYNS %d", /*dec,*/ ponteiroFim);
 
-	struct Sascar::ProtocolUtil::sLapso lapso;
-	bluetec::sBluetecHeaderFile header;
+	struct BTCloud::Util::Lapse lapso;
+	Bluetec::HeaderDataFile header;
 	string pLapso;
 
 	lapso.idTrecho = cFileManager.getNextIdTrecho();
@@ -225,11 +226,11 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	lapso.an3 = 0;
 	lapso.an4 = 0;
 
-	lapso.timestamp = mktime(Sascar::ProtocolUtil::ParseDataHora(hsyns.substr(8, 7)));
+	lapso.timestamp = mktime(BTCloud::Util::ParseDataHora(hsyns.substr(8, 7)));
 
 	// Load driver ibutton in bcd
 	lapso.ibtMotorista = "";
-	lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(1));
+	lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(1));
 
 	// Standardizes the operation code to empty 81
 	if(lapso.ibtMotorista == "81")
@@ -239,37 +240,37 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	}
 	else
 	{
-		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(2));
-		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(3));
-		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(4));
-		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(5));
-		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(6));
-		lapso.ibtMotorista += Sascar::ProtocolUtil::ParseBCDDecimal(hsyns.at(7));
+		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(2));
+		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(3));
+		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(4));
+		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(5));
+		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(6));
+		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(7));
 	}
 
 	Dbg(TAG "Parse timestamp Hex 0x%x", /*dec, */ hsyns.substr(8, 7).c_str());
 	Dbg(TAG "Parse timestamp %d", /*dec, */ lapso.timestamp);
-	lapso.odometro = Sascar::ProtocolUtil::ParseOdometro(hsyns.substr(15, 3));
+	lapso.odometro = BTCloud::Util::ParseOdometro(hsyns.substr(15, 3));
 
 	Dbg(TAG "Parse odometer %d", /*dec, */ lapso.odometro);
 	Dbg(TAG "%d %d %d %d - %d %d %d %d", /*dec, */ hex, setw(2), setfill('0'), int((unsigned char)hsyns.at(0)), hex, setw(2), setfill('0'), int((unsigned char)hsyns.at(hsyns.length() - 1)));
-	lapso.horimetro = Sascar::ProtocolUtil::ParseHorimetro(hsyns.substr(18, 3));
+	lapso.horimetro = BTCloud::Util::ParseHorimetro(hsyns.substr(18, 3));
 
 	Dbg(TAG "Parse horimeter %d", /*dec, */ lapso.horimetro);
 
-	pLapso = Sascar::ProtocolUtil::PersistableLapso(&lapso);
+	pLapso = BTCloud::Util::PersistableLapso(&lapso);
 
 	header.file = arquivo;
 	header.endPointer = ponteiroFim;
 	header.timestamp = lapso.timestamp;
-	header.dataType = bluetec::enumDataType::HSYNS;
+	header.dataType = Bluetec::enumDataType::HSYNS;
 
 	Dbg(TAG "IMC 1 - header.dataType = %d", header.dataType);
 	Dbg(TAG "Saving HSYNS %d .. ", /*dec,*/ header.endPointer);
 
 	// Save route start
 	Dbg(TAG "Save buffer file Header data type %d", header.dataType);
-	Dbg(TAG "Save buffer file Enum data type %d", /*dec,*/ bluetec::enumDataType::HSYNS);
+	Dbg(TAG "Save buffer file Enum data type %d", /*dec,*/ Bluetec::enumDataType::HSYNS);
 
 	Dbg(TAG "IMC 2 - header.dataType = %d", header.dataType);
 	cFileManager.saveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
@@ -420,22 +421,22 @@ void Protocol::UpdateLastPosition(int vehicleId)
 
 void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 {
-	bluetec::sBluetecHeaderFile header;
+	Bluetec::HeaderDataFile header;
 	char tBuffer[500000];
 	uint32_t tSize=0;
-	bluetec::sHfull hfull;
-	struct Sascar::ProtocolUtil::sLapso lapso;
+	Bluetec::HFull hfull;
+	struct BTCloud::Util::Lapse lapso;
 	int tipoDado = 0;
 	int index = 0;
 	int fim = 0;
 	char bufferControle[255];
-	Sascar::ProtocolUtil::saidas *controle;
+	BTCloud::Util::Output *controle;
 	char bufferExpansao[255];
-	Sascar::ProtocolUtil::saidas *expansao;
+	BTCloud::Util::Output *expansao;
 	string operacao;
 	int tamLapso = 0;
 	char bufferED[255];
-	Sascar::ProtocolUtil::saidas *ed;
+	BTCloud::Util::Output *ed;
 
 	int maxSizePacote = 1500;
 	int sizePacote = 0;
@@ -464,10 +465,10 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 	if(!cFileManager.getHfull(dataCache.veioId, hfull))
 	{
-		hfull.lapso = bluetec::enumDefaultValues::LAPSO;
-		hfull.acely = bluetec::enumDefaultValues::ACELY;
-		hfull.acelx = bluetec::enumDefaultValues::ACELX;
-		hfull.spanAcel = bluetec::enumDefaultValues::SPANACEL;
+		hfull.lapso = Bluetec::enumDefaultValues::LAPSO;
+		hfull.acely = Bluetec::enumDefaultValues::ACELY;
+		hfull.acelx = Bluetec::enumDefaultValues::ACELX;
+		hfull.spanAcel = Bluetec::enumDefaultValues::SPANACEL;
 	}
 
 	Dbg(TAG "Searching data before this file...");
@@ -485,24 +486,24 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		lapso.timestamp = header.timestamp;
 		switch(header.dataType)
 		{
-			case bluetec::enumDataType::HSYNS_DADOS:
+			case Bluetec::enumDataType::HSYNS_DADOS:
 
-			case bluetec::enumDataType::HSYNS:
+			case Bluetec::enumDataType::HSYNS:
 				// This route was already started then the first lapse must be restored
-				Sascar::ProtocolUtil::LapsoSetup(tBuffer, lapso);
-				tipoDado = bluetec::enumDataType::HSYNS_DADOS;
+				BTCloud::Util::LapsoSetup(tBuffer, lapso);
+				tipoDado = Bluetec::enumDataType::HSYNS_DADOS;
 
 				// Clean the temporary lapse
 				cFileManager.delFile(dataCache.veioId, header.headerFile);
 			break;
 
-			case bluetec::enumDataType::DADOS:
+			case Bluetec::enumDataType::DADOS:
 				// This case of data shard found does not have a meaning, it will be updated
 				dados = string(tBuffer) + dados;
 
 				// Clean file temporarily to overwrite it
 				cFileManager.delFile(dataCache.veioId, header.headerFile);
-				tipoDado = bluetec::enumDataType::DADOS;
+				tipoDado = Bluetec::enumDataType::DADOS;
 			break;
 		}
 	}
@@ -523,35 +524,35 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 		switch(header.dataType)
 		{
-			case bluetec::enumDataType::DADOS:
+			case Bluetec::enumDataType::DADOS:
 				// This case of data shard found does not have a meaning, it will be updated
 				dados = dados + string(tBuffer);
 
 				// Clean file temporarily to overwrite it
 				cFileManager.delFile(dataCache.veioId, header.headerFile);
-				tipoDado = bluetec::enumDataType::DADOS;
+				tipoDado = Bluetec::enumDataType::DADOS;
 			break;
 
-			case bluetec::enumDataType::FINAL:
+			case Bluetec::enumDataType::FINAL:
 
-			case bluetec::enumDataType::DADOS_FINAL:
-				if(header.dataType == bluetec::enumDataType::DADOS_FINAL)
+			case Bluetec::enumDataType::DADOS_FINAL:
+				if(header.dataType == Bluetec::enumDataType::DADOS_FINAL)
 					dados = dados + string(tBuffer);
 
 				// Clean file temporarily to overwrite it
 				cFileManager.delFile(dataCache.veioId, header.headerFile);
 
 				// Verify if has an opened route
-				if(tipoDado != bluetec::enumDataType::DADOS)
-					tipoDado = bluetec::enumDataType::HSYNS_FINAL;
+				if(tipoDado != Bluetec::enumDataType::DADOS)
+					tipoDado = Bluetec::enumDataType::HSYNS_FINAL;
 				else
-					tipoDado = bluetec::enumDataType::DADOS_FINAL;
+					tipoDado = Bluetec::enumDataType::DADOS_FINAL;
 			break;
 		}
 	}
 
 	Dbg(TAG "Verifying route data type %d...", tipoDado);
-	if(tipoDado == bluetec::enumDataType::DADOS_FINAL || tipoDado == bluetec::enumDataType::DADOS)
+	if(tipoDado == Bluetec::enumDataType::DADOS_FINAL || tipoDado == Bluetec::enumDataType::DADOS)
 	{
 		Dbg(TAG "Unknown route");
 
@@ -574,8 +575,8 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			{
 				// Calc control byte size
 				bufferControle[0] = dados.at(index);
-				controle = (Sascar::ProtocolUtil::saidas*) bufferControle;
-				tamLapso = Sascar::ProtocolUtil::TamanhoLapso(controle);
+				controle = (BTCloud::Util::Output*) bufferControle;
+				tamLapso = BTCloud::Util::TamanhoLapso(controle);
 
 				// Case the expasion bit is enable, calc the expasion byte
 				if(controle->saida0 && index + 1 <= fim)
@@ -584,8 +585,8 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 					index++;
 
 					bufferExpansao[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
-					expansao = (Sascar::ProtocolUtil::saidas*) bufferExpansao;
-					tamLapso += (Sascar::ProtocolUtil::TamanhoLapsoExpansao(expansao) + 1);
+					expansao = (BTCloud::Util::Output*) bufferExpansao;
+					tamLapso += (BTCloud::Util::TamanhoLapsoExpansao(expansao) + 1);
 				}
 
 				// Validate route lapse at this point
@@ -620,7 +621,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 					{
 						index++;
 						bufferED[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
-						ed = (Sascar::ProtocolUtil::saidas*) bufferED;
+						ed = (BTCloud::Util::Output*) bufferED;
 
 						lapso.ed1 = (unsigned int) ed->saida0;
 						lapso.ed2 = (unsigned int) ed->saida1;
@@ -680,10 +681,10 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 								char buffer[255];
 								buffer[0] = controleOper;
-								Sascar::ProtocolUtil::saidas *p;
-								p = (Sascar::ProtocolUtil::saidas*) buffer;
-								double lat = Sascar::ProtocolUtil::ParseLatitude(operacao.substr(1, 3), p->saida2);
-								double lon = Sascar::ProtocolUtil::ParseLongitude(operacao.substr(4, 3), p->saida1, p->saida0);
+								BTCloud::Util::Output *p;
+								p = (BTCloud::Util::Output*) buffer;
+								double lat = BTCloud::Util::ParseLatitude(operacao.substr(1, 3), p->saida2);
+								double lon = BTCloud::Util::ParseLongitude(operacao.substr(4, 3), p->saida1, p->saida0);
 
 								Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
@@ -762,7 +763,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 					}
 					else
 					{
-						Sascar::ProtocolUtil::LapsoToTelemetria(pTelemetry, lapso);
+						BTCloud::Util::LapsoToTelemetria(pTelemetry, lapso);
 					}
 					lapso.timestamp += hfull.lapso;
 				}
@@ -783,13 +784,13 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 		// Case do not exist a end of route, the last lapse must be returned
 		// to persist and to not reprocess
-		if(tipoDado != bluetec::enumDataType::HSYNS_FINAL)
+		if(tipoDado != Bluetec::enumDataType::HSYNS_FINAL)
 		{
 			header.beginPointer = ponteiroIni;
 			header.endPointer = ponteiroFim;
 			header.file = arquivo;
 			header.idTrecho = lapso.idTrecho;
-			string pLapso = Sascar::ProtocolUtil::PersistableLapso(&lapso);
+			string pLapso = BTCloud::Util::PersistableLapso(&lapso);
 
 			Dbg(TAG "Save buffer file header data type %d", header.dataType);
 			cFileManager.saveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
@@ -1213,7 +1214,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 
 		// Rename file to set as processed
 		string newPath = "";
-		ProtocolUtil::CreateFileNameProcessed(&newPath, tokens);
+		Util::CreateFileNameProcessed(&newPath, tokens);
 		cFileManager.renameFile(path, newPath);
 	}
 }

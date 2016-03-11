@@ -23,7 +23,7 @@
 #include "io/FileMod.h"
 #include "io/SwapFile.h"
 
-namespace bluetec {
+namespace Bluetec {
 
 #define NAME_INDEX_FILE "file.idx"
 #define SEQUENCE_TRECHO "sequence"
@@ -47,25 +47,30 @@ enum enumDataType
 	FINAL = 5,
 	DADOS = 6,
 	DADOS_FINAL = 7
-	
 };
 
-struct sHeaderFile
+/** \class DataFile
+ *  \brief This struct represents the file at disk.
+ */
+struct DataFile
 {
-		uint64_t id; // name of file at disk
+	uint64_t id;
 } __attribute__ ((packed)) ;
 
-struct sBluetecHeaderFile
+/** \class HeaderDataFile
+ *  \brief This struct has a file and header data.
+ */
+struct HeaderDataFile
 {
-	uint16_t file;			//Controle interno pacote bluetec
-	uint32_t beginPointer;	//Controle interno pacote bluetec
-	uint32_t endPointer;	//Controle interno pacote bluetec
-	uint32_t timestamp;		//Controle interno pacote bluetec
-	uint8_t  dataType;		//Controle interno montagem pacote bluetec
-	uint32_t idTrecho;		//Controle interno montagem pacote bluetec
-	sHeaderFile headerFile;	//informações do arquivo fisico.
+	uint16_t file;
+	uint32_t beginPointer;
+	uint32_t endPointer;
+	uint32_t timestamp;
+	uint8_t  dataType;
+	uint32_t idTrecho;
+	DataFile headerFile;
 
-	sBluetecHeaderFile()
+	HeaderDataFile()
 	{
 		file = 0;
 		beginPointer = 0;
@@ -77,7 +82,10 @@ struct sBluetecHeaderFile
 	}
 } __attribute__ ((packed)) ;
 
-struct sHfull
+/** \class HFull
+ *  \brief This entity has a contract information.
+ */
+struct HFull
 {
 	uint8_t lapso;
 	uint64_t idVeiculo;
@@ -98,10 +106,10 @@ struct sHfull
 	uint8_t spanAcel;
 	uint8_t reservado3[3];
 	uint8_t verConsistenciaSetup;
-	uint8_t confHardwareRe; //Configurações de Hardware (Redundância)
+	uint8_t confHardwareRe;
 	uint16_t limiteAnalogico1;
 	uint8_t limiteAnalogico234[3];
-	uint32_t lapsosGravacaoEvento; //Lapsos de gravação do evento
+	uint32_t lapsosGravacaoEvento;
 	uint8_t reservado4[8];
 	uint8_t volume;
 	uint16_t parametrosGPS;
@@ -140,12 +148,12 @@ class BlueTecFileManager
 		/*
 		 * Retorna o buffer para um determinado arquivo.
 		 */
-		virtual bool getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct sBluetecHeaderFile& bluetecHeaderFile);
+		virtual bool getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct HeaderDataFile& bluetecHeaderFile);
 
 		/*
 		 * Salva o buffer em um determinado arquivo.
 		 */
-		virtual void saveBufferFile(uint32_t veioid, const char *bufferFile, uint32_t sizeBufferFile, struct sBluetecHeaderFile& bluetecHeaderFile);
+		virtual void saveBufferFile(uint32_t veioid, const char *bufferFile, uint32_t sizeBufferFile, struct HeaderDataFile& bluetecHeaderFile);
 
 		/*
 		 * Rename file at disk
@@ -155,7 +163,7 @@ class BlueTecFileManager
 		/*
 		 * Remove um arquivo fisicamente.
 		 */
-		virtual void delFile(uint32_t veioid, sHeaderFile file);
+		virtual void delFile(uint32_t veioid, DataFile file);
 
 		/*
 		 * Retorna um novo id de trecho.
@@ -165,27 +173,27 @@ class BlueTecFileManager
 		/*
 		 * Retorna o HFUll de um equipamento especifico.
 		 */
-		virtual bool getHfull(uint32_t veioid, sHfull& hfull);
+		virtual bool getHfull(uint32_t veioid, HFull& hfull);
 
 		/*
 		 * Salva salva o hfull do equipamento especifico.
 		 */
-		virtual void saveHfull(uint32_t veioid, sHfull& hfull);
+		virtual void saveHfull(uint32_t veioid, HFull& hfull);
 
 
 	private:
 		/* Para garantir uma copia do arquivo... */
 		SwapFile swap;
 		FileMod files;
-		virtual bool getsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct sBluetecHeaderFile& bluetecHeaderFile);
-		virtual std::vector<struct sBluetecHeaderFile*> *getListsBluetecHeaderFile(uint32_t veioid);
-		virtual void saveIndexFile(uint32_t veioid, std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile);
-		virtual void deleteIndexFileObject(std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile);
+		virtual bool getsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct HeaderDataFile& bluetecHeaderFile);
+		virtual std::vector<struct HeaderDataFile*> *getListsBluetecHeaderFile(uint32_t veioid);
+		virtual void saveIndexFile(uint32_t veioid, std::vector<struct HeaderDataFile*> *listBluetecHeaderFile);
+		virtual void deleteIndexFileObject(std::vector<struct HeaderDataFile*> *listBluetecHeaderFile);
 
 		/*
 		 * Libera espaço em disco utilizado pelos registros que estão armazenadas a mais de n dias.
 		 */
-		virtual void vacuum(uint32_t veioid, std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile);
+		virtual void vacuum(uint32_t veioid, std::vector<struct HeaderDataFile*> *listBluetecHeaderFile);
 };
 
 } // namespace
