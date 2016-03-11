@@ -86,12 +86,12 @@ void LapsoSetup(string lapso, struct sLapso& setup)
 
 void LapsoToTelemetria(Bluetec400::Telemetry *tele, struct sLapso& lapso)
 {
-	tele->trecho = lapso.idTrecho;
-	tele->dataHora = lapso.timestamp;
-	tele->velocidade = lapso.velocidade;
+	tele->stretch = lapso.idTrecho;
+	tele->dateTime = lapso.timestamp;
+	tele->velocity = lapso.velocidade;
 	tele->rpm = lapso.rpm;
-	tele->odometro = lapso.odometro;
-	tele->horimetro = lapso.horimetro;
+	tele->odometer = lapso.odometro;
+	tele->hourmeter = lapso.horimetro;
 	tele->ed1 = lapso.ed1;
 	tele->ed2 = lapso.ed2;
 	tele->ed3 = lapso.ed3;
@@ -106,7 +106,7 @@ void LapsoToTelemetria(Bluetec400::Telemetry *tele, struct sLapso& lapso)
 	tele->an2 = lapso.an2;
 	tele->an3 = lapso.an3;
 	tele->an4 = lapso.an4;
-	tele->operacao = lapso.operacao;
+	tele->operation = lapso.operacao;
 }
 
 // Transform a sLapse struct in a persistable text format

@@ -71,7 +71,7 @@ class Protocol
 		const int iLapsoSize;
 		std::string sSerializedData;
 
-		DataCache cad;
+		DataCache dataCache;
 		Package cPackage;
 		Data *pData;
 		Position *pPosition;
