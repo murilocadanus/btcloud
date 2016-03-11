@@ -1,5 +1,22 @@
+/*
+* Copyright (c) 2016, Sascar
+* All rights reserved.
+*
+* THIS SOFTWARE IS PROVIDED BY SASCAR ''AS IS'' AND ANY
+* EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL SASCAR BE LIABLE FOR ANY
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+* ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef BLUETECFILEMANAGER_H_
 #define BLUETECFILEMANAGER_H_
+
 #include <iostream>
 #include <stdint.h>
 #include <vector>
@@ -35,18 +52,18 @@ enum enumDataType
 
 struct sHeaderFile
 {
-		uint64_t id; //nome do arquivo fisico.
+		uint64_t id; // name of file at disk
 } __attribute__ ((packed)) ;
 
 struct sBluetecHeaderFile
 {
-	uint16_t file;          //Controle interno pacote bluetec
-	uint32_t beginPointer;  //Controle interno pacote bluetec
-	uint32_t endPointer;    //Controle interno pacote bluetec
-	uint32_t timestamp;     //Controle interno pacote bluetec
-	uint8_t  dataType;  //Controle interno montagem pacote bluetec
-	uint32_t idTrecho;      //Controle interno montagem pacote bluetec
-	sHeaderFile headerFile; //informações do arquivo fisico.
+	uint16_t file;			//Controle interno pacote bluetec
+	uint32_t beginPointer;	//Controle interno pacote bluetec
+	uint32_t endPointer;	//Controle interno pacote bluetec
+	uint32_t timestamp;		//Controle interno pacote bluetec
+	uint8_t  dataType;		//Controle interno montagem pacote bluetec
+	uint32_t idTrecho;		//Controle interno montagem pacote bluetec
+	sHeaderFile headerFile;	//informações do arquivo fisico.
 
 	sBluetecHeaderFile()
 	{
@@ -108,7 +125,9 @@ struct sHfull
 	uint8_t hfull[5];
 } __attribute__ ((packed)) ;
 
-
+/** \class BlueTecFileManager
+ *  \brief Manager class of Bluetec files.
+ */
 class BlueTecFileManager
 {
 	public:
@@ -116,6 +135,7 @@ class BlueTecFileManager
 		BlueTecFileManager(std::string path);
 		virtual ~BlueTecFileManager();
 		virtual void setPath(std::string path);
+
 		/* se pointer = 0 pesquisar o ultimo ponteiro indendente do "file". */
 		/*
 		 * Retorna o buffer para um determinado arquivo.
@@ -168,6 +188,6 @@ class BlueTecFileManager
 		virtual void vacuum(uint32_t veioid, std::vector<struct sBluetecHeaderFile*> *listBluetecHeaderFile);
 };
 
-} /* namespace bluetec */
+} // namespace
 
-#endif /* BLUETECFILEMANAGER_H_ */
+#endif // BLUETECFILEMANAGER_H_

@@ -5,8 +5,6 @@ SOURCES +=	source/main.cpp \
 			source/io/FileMod.cpp \
 			source/io/SwapFile.cpp \
 			source/io/File.cpp \
-			source/entities/pacote_posicao.pb.cc \
-			source/entities/bluetec400.pb.cc \
 			source/util/ProtocolUtil.cpp
 
 
@@ -19,8 +17,6 @@ HEADERS +=	\
 			include/io/FileMod.h \
 			include/io/SwapFile.h \
 			include/io/File.h \
-			include/entities/pacote_posicao.pb.h \
-			include/entities/bluetec400.pb.h \
 			include/util/ProtocolUtil.hpp \
     include/entities/Bluetec400.hpp
 

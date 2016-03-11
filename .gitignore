@@ -12,6 +12,7 @@
 *.so
 *.dll
 *.dylib
+docs/*
 
 # Qt-es
 

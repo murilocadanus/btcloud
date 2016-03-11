@@ -1,3 +1,19 @@
+/*
+* Copyright (c) 2016, Sascar
+* All rights reserved.
+*
+* THIS SOFTWARE IS PROVIDED BY SASCAR ''AS IS'' AND ANY
+* EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL SASCAR BE LIABLE FOR ANY
+* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+* ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef PROTOCOL_HPP
 #define PROTOCOL_HPP
 
@@ -16,6 +32,9 @@ using namespace Sascar::Bluetec400;
 
 namespace Sascar {
 
+/** \class Protocol
+ *  \brief Class used to parse BT4 files and generate JSON output.
+ */
 class Protocol
 {
 	public:
@@ -39,29 +58,6 @@ class Protocol
 		void ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo);
 		void ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim);
 		void ParseHSYNC(string hsync);
-
-	public:
-		static char nome_projeto[50];
-		static int projeto;
-
-		static char campo_ordem[20];
-		static char campo_ordem_nr[5];
-		static int ncampo_ordem;
-		static char campo_update1[20];
-		static char campo_update2[20];
-		static char campo_update3[20];
-		static char campo_update4[20];
-
-		static char campo_ordem_bdcentral[20];
-		static char campo_filtro_bdcentral[20];
-		static char campo_bdcentral_cond[50];
-
-		static int sleep_conexao;
-		static int sleep_comandos;
-		static int sleep_ack;
-		static int n_tentativas_reenvio;
-
-		static char modelos_sasgc[200];
 
 	private:
 		mongo::DBClientConnection *pDBClientConnection;
