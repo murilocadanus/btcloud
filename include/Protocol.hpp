@@ -6,81 +6,18 @@
 #include <netinet/in.h>
 #include <list>
 #include <string>
-#include "entities/pacote_posicao.pb.h"
 #include "mongo/client/dbclient.h" // for the driver
-#include "entities/bluetec400.pb.h"
+#include "entities/Bluetec400.hpp"
 #include "managers/BlueTecFileManager.h"
 
 using namespace std;
 
+using namespace Sascar::Bluetec400;
+
 namespace Sascar {
 
-struct cache_cadastro {
-	uint64_t esn;
-	uint64_t id;
-	uint64_t antena_int;
-	std::string antena_text;
-	uint64_t antena_tipo;
-	uint32_t projeto;
-	uint32_t clioid;
-	uint32_t ger1;
-	uint32_t ger2;
-	uint32_t ger3;
-	uint32_t connumero;
-	uint32_t veioid;
-	uint32_t tipo_contrato;
-	uint32_t classe;
-	uint32_t serial0;
-	uint32_t serial1;
-	uint32_t is_sasgc;
-	uint32_t tipo_veiculo;
-	uint32_t debug;
-	std::string placa;
-	std::string entradas;
-	std::string saidas;
-	std::vector<int32_t> sensores;
-	std::vector<int32_t> atuadores;
-	uint32_t rpm_maximo;
-	std::string clincid;
-	std::string clientName;
-};
-
-enum pacote_recebido {
-	PACOTE_INVALIDO,
-	PACOTE_ACK,
-	PACOTE_NACK,
-	PACOTE_DADOS,
-	PACOTE_SETUP,
-	PACOTE_RESTART, // Restart change the group of commands
-	PACOTE_APRESENTACAO,
-	PACOTE_RESTART_PARTE_COMANDO
-};
-
-#define PROTO_SAS401		0x0003
-#define PROTO_VDO			0x0009
-#define PROTO_MTC600		0x000d
-#define PROTO_MXT150		0x000f
-#define PROTO_VDOQB			0x0010
-#define PROTO_MXT100		0x0011
-#define PROTO_MTC550		0x0013
-#define PROTO_MXT140		0x0014
-#define PROTO_VDO_SBTEC		0x0017
-#define PROTO_MXT150_SBTEC	0x0018
-
-#define EQUIPAMENTO_BD_MTC			8
-#define EQUIPAMENTO_BD_VDO			16
-#define EQUIPAMENTO_BD_MTC600		20
-#define EQUIPAMENTO_BD_MXT150		27
-#define EQUIPAMENTO_BD_MXT100		29
-#define EQUIPAMENTO_BD_RVS_QB		30
-#define EQUIPAMENTO_BD_MTC550		46
-#define EQUIPAMENTO_BD_MXT140		55
-#define EQUIPAMENTO_BD_RVSSBTEC		38
-#define EQUIPAMENTO_BD_MXT150SBTEC	33
-
-
-class Protocol {
-
+class Protocol
+{
 	public:
 		Protocol();
 		virtual ~Protocol();
@@ -89,7 +26,6 @@ class Protocol {
 		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo);
 
 	private:
-		int Project2Protocol(uint32_t projeto);
 		void CreatePosition();
 		uint64_t GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate);
 		void UpdateLastPosition(int vehicleId);
@@ -130,17 +66,18 @@ class Protocol {
 	private:
 		mongo::DBClientConnection *pDBClientConnection;
 		bluetec::BlueTecFileManager cFileManager;
-		pacote_posicao::bluetec400 cBluetecPacote;
-		pacote_posicao::pacote_enriquecido *pPacote;
 		uint64_t iLastPositionDate;
 		uint32_t iLastPositionVehicle;
 		const int iLapsoSize;
-		cache_cadastro cad;
 		std::string sSerializedData;
-		pacote_posicao::equip_flags *pEventFlag;
-		pacote_posicao::equip_posicao *pPosition;
-		pacote_posicao::t_telemetria_bluetec400 *pTelemetry;
-		pacote_posicao::t32_odo_vel *pOdoVelGPS;
+
+		cache_cadastro cad;
+		Bluetec400::Bluetec400 cBluetecPacote;
+		PacoteEnriquecido *pPacote;
+		EquipPosicao *pPosition;
+		EquipFlags *pEventFlag;
+		Telemetry *pTelemetry;
+		OdoVel *pOdoVelGPS;
 };
 
 }

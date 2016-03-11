@@ -25,6 +25,12 @@ Protocol::Protocol()
 	: iLastPositionDate(false)
 	, iLapsoSize(sizeof(long int) + sizeof(double) * 6 + sizeof(int) * 13 + 16)
 {
+	pPacote = &cBluetecPacote.pacoteEnriquecido;
+	pTelemetry = &cBluetecPacote.telemetry;
+
+	pPosition = &pPacote->equipPosicao;
+	pEventFlag = &pPosition->eventoflag;
+	pOdoVelGPS = &pPosition->odo_vel_gps;
 }
 
 Protocol::~Protocol()
@@ -277,43 +283,43 @@ void Protocol::CreatePosition()
 	std::string plate = cad.placa;
 	std::string client = cad.clientName;
 
-	u_int64_t datePosition = cBluetecPacote.pe().ep().datahora() == 0
+	u_int64_t datePosition = pPosition->datahora == 0
 			? pTimer->GetCurrentTime()
-			: cBluetecPacote.pe().ep().datahora(); // "2015-11-05T08:40:44.000Z"
+			: pPosition->datahora; // "2015-11-05T08:40:44.000Z"
 	datePosition *= 1000;
 
-	u_int64_t dateArrival = cBluetecPacote.pe().ep().datachegada() == 0
+	u_int64_t dateArrival = pPosition->datachegada == 0
 			? pTimer->GetCurrentTime()
-			: cBluetecPacote.pe().ep().datachegada(); //"2015-11-05T08:40:44.000Z";
+			: pPosition->datachegada; //"2015-11-05T08:40:44.000Z";
 	dateArrival *= 1000;
 
 	std::string address = "";
 	std::string neighborhood = "";
 	std::string city = "";
 	std::string province = "";
-	int velocity = cBluetecPacote.tb(0).velocidade();
-	double lat2 = cBluetecPacote.pe().ep().lat2();
-	double long2 = cBluetecPacote.pe().ep().long2();
+	int velocity = pTelemetry->velocidade;
+	double lat2 = pPosition->lat2;
+	double long2 = pPosition->long2;
 	std::string number = "";
 	std::string country = "";
 	std::string velocityStreet = "";
 	bool gps = true;
 
-	int32_t analogic1 = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).an1() : 0;
-	int32_t analogic2 = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).an2() : 0;
-	int32_t analogic3 = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).an3() : 0;
-	int32_t analogic4 = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).an4() : 0;
-	bool digital1 = cBluetecPacote.tb(0).ed7();
-	bool digital2 = cBluetecPacote.tb(0).ed6();
-	bool digital3 = cBluetecPacote.tb(0).ed5();
-	bool digital4 = cBluetecPacote.tb(0).ed4();
-	int32_t horimeter = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).horimetro() : 0;
-	double_t accelerometerX = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).acelx() : .0;
-	double_t accelerometerY = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).acely() : .0;
-	double_t hodometer = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).odometro() : .0;
-	int32_t rpm = cBluetecPacote.tb_size() > 0 ? cBluetecPacote.tb(0).rpm() : 0;
-	bool ignition = cBluetecPacote.pe().ep().eventoflag().ignicao();
-	bool breaks = cBluetecPacote.tb(0).ed8();
+	int32_t analogic1 = pTelemetry->an1;
+	int32_t analogic2 = pTelemetry->an2;
+	int32_t analogic3 = pTelemetry->an3;
+	int32_t analogic4 = pTelemetry->an4;
+	bool digital1 = pTelemetry->ed7;
+	bool digital2 = pTelemetry->ed6;
+	bool digital3 = pTelemetry->ed5;
+	bool digital4 = pTelemetry->ed4;
+	int32_t horimeter = pTelemetry->horimetro;
+	double_t accelerometerX = pTelemetry->acelX;
+	double_t accelerometerY = pTelemetry->acelY;
+	double_t hodometer = pTelemetry->odometro;
+	int32_t rpm = pTelemetry->rpm;
+	bool ignition = pEventFlag->ignicao;
+	bool breaks = pTelemetry->ed8;
 
 	// Create BSON to be persisted
 	mongo::BSONObj dataPosJSON = BSON(
@@ -344,7 +350,7 @@ void Protocol::CreatePosition()
 		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataPosJSON);
 
 		// Get last position
-		uint64_t lastPositionDate = GetLastPosition(vehicle, lastPositionDate);
+		uint64_t lastPositionDate = GetLastPosition(cad.veioid, datePosition);
 
 		// Insert/Update data at ultima_posicao
 		if(lastPositionDate == 0)
@@ -355,7 +361,7 @@ void Protocol::CreatePosition()
 		else if(lastPositionDate < datePosition)
 		{
 			Dbg(TAG "Updating position at mongodb collection ultima_posicao");
-			UpdateLastPosition(vehicle);
+			UpdateLastPosition(cad.veioid);
 		}
 		else
 			Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
@@ -398,15 +404,11 @@ void Protocol::UpdateLastPosition(int vehicleId)
 {
 	mongo::Query query = QUERY("veiculo" << vehicleId);
 
-	// Get all values from bluetec package
-	int velocity = cBluetecPacote.tb(0).velocidade();
-	double lat2 = cBluetecPacote.pe().ep().lat2();
-	double long2 = cBluetecPacote.pe().ep().long2();
-
 	// Create update query
 	mongo::BSONObj querySet = BSON("$set" << BSON(
-										"velocidade" << velocity <<
-										"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2))
+										"velocidade" << pTelemetry->velocidade <<
+										"coordenadas" << BSON("Type" << "Point" <<
+															"coordinates" << BSON_ARRAY(pPosition->long2 << pPosition->lat2))
 										)
 							);
 
@@ -581,7 +583,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 					// The expasion byte comes after control byte, so increment it to calculate correctly next data
 					index++;
 
-					bufferExpansao[0] = dados.at(index);
+					bufferExpansao[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
 					expansao = (Sascar::ProtocolUtil::saidas*) bufferExpansao;
 					tamLapso += (Sascar::ProtocolUtil::TamanhoLapsoExpansao(expansao) + 1);
 				}
@@ -617,7 +619,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 					if(controle->saida1)
 					{
 						index++;
-						bufferED[0] = dados.at(index);
+						bufferED[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
 						ed = (Sascar::ProtocolUtil::saidas*) bufferED;
 
 						lapso.ed1 = (unsigned int) ed->saida0;
@@ -686,22 +688,17 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 								Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
 								// Setting data to position package
-								pPosition = pPacote->mutable_ep();
-								pPosition->set_lat2(lat);
-								pPosition->set_long2(lon);
-								pPosition->set_datahora(lapso.timestamp);
-								//	posicao->set_datachegada(lapso.timestamp);
-								pPosition->set_datachegada(pTimer->GetCurrentTime());
-
-								pEventFlag = pPosition->mutable_eventoflag();
+								pPosition->lat2 = lat;
+								pPosition->long2 = lon;
+								pPosition->datahora = lapso.timestamp;
+								pPosition->datachegada = pTimer->GetCurrentTime();
 
 								if(lapso.rpm > 0 && lapso.velocidade > 0)
-									pEventFlag->set_ignicao(1);
+									pEventFlag->ignicao = 1;
 								else
-									pEventFlag->set_ignicao(0);
+									pEventFlag->ignicao = 0;
 
-								pOdoVelGPS = pPosition->mutable_odo_vel_gps();
-								pOdoVelGPS->set_velocidade(lapso.velocidade);
+								pOdoVelGPS->velocidade = lapso.velocidade;
 
 								Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
 								Dbg(TAG "Position found, sending package with %d lapses of %d bytes",
@@ -713,8 +710,8 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 								// Save JSON at MongoDB
 								CreatePosition();
 
+								// Reset entity
 								cBluetecPacote.Clear();
-								cBluetecPacote.clear_tb();
 
 								// Reset maximum size of packet
 								sizePacote = 0;
@@ -756,14 +753,15 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 						// Save data at MongoDB
 						//CreatePosition();
-						cBluetecPacote.clear_tb();
+
+						// Reset entity
+						//cBluetecPacote.Clear();
 
 						// Reset the value of package with the size of lapse
 						sizePacote = iLapsoSize;
 					}
 					else
 					{
-						pTelemetry = cBluetecPacote.add_tb();
 						Sascar::ProtocolUtil::LapsoToTelemetria(pTelemetry, lapso);
 					}
 					lapso.timestamp += hfull.lapso;
@@ -781,7 +779,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 		//bluetecPacote.SerializeToString(&serializado);
 		//CreatePosition();
-		cBluetecPacote.clear_tb();
+		//cBluetecPacote.Clear();
 
 		// Case do not exist a end of route, the last lapse must be returned
 		// to persist and to not reprocess
@@ -981,17 +979,11 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 {
 	cFileManager.setPath(pConfiguration->GetAppListeningPath());
 
-//	if(!pDBClientConnection)
-		pDBClientConnection = dbClient;
+	pDBClientConnection = dbClient;
 
-	pacote_posicao::equip_contrato *contrato;
 	FILE *in = 0;
 	unsigned char bt4[6500];
 	std::string sbt4;
-
-	cBluetecPacote.Clear();
-	pPacote = cBluetecPacote.mutable_pe();
-	contrato = pPacote->mutable_ec();
 
 	Dbg(TAG "Processing: %s", path);
 
@@ -1224,17 +1216,6 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 		ProtocolUtil::CreateFileNameProcessed(&newPath, tokens);
 		cFileManager.renameFile(path, newPath);
 	}
-}
-
-int Protocol::Project2Protocol(uint32_t projeto)
-{
-	switch (projeto)
-	{
-		case EQUIPAMENTO_BD_MTC550:
-			return PROTO_MTC550;
-		break;
-	}
-	return projeto;
 }
 
 }

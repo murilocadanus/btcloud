@@ -19,7 +19,7 @@
 
 #include <string>
 #include <sstream>
-#include "entities/bluetec400.pb.h"
+#include "entities/Bluetec400.hpp"
 
 using namespace std;
 
@@ -65,7 +65,7 @@ namespace Sascar { namespace ProtocolUtil {
 	} sLapso;
 
 	void LapsoSetup(string lapso, struct sLapso& setup);
-	void LapsoToTelemetria(pacote_posicao::t_telemetria_bluetec400 *tele, struct sLapso& lapso);
+	void LapsoToTelemetria(Bluetec400::Telemetry *tele, struct sLapso& lapso);
 	string PersistableLapso(sLapso *l);
 	int TamanhoLapsoExpansao(char expansao);
 	int TamanhoLapsoExpansao(saidas *p);

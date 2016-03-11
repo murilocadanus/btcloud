@@ -84,29 +84,29 @@ void LapsoSetup(string lapso, struct sLapso& setup)
 	Dbg(TAG "Index: %d ibtMotorista: %s", index, setup.ibtMotorista.c_str());
 }
 
-void LapsoToTelemetria(pacote_posicao::t_telemetria_bluetec400 *tele, struct sLapso& lapso)
+void LapsoToTelemetria(Bluetec400::Telemetry *tele, struct sLapso& lapso)
 {
-	tele->set_trecho(lapso.idTrecho);
-	tele->set_datahora(lapso.timestamp);
-	tele->set_velocidade(lapso.velocidade);
-	tele->set_rpm(lapso.rpm);
-	tele->set_odometro(lapso.odometro);
-	tele->set_horimetro(lapso.horimetro);
-	tele->set_ed1(lapso.ed1);
-	tele->set_ed2(lapso.ed2);
-	tele->set_ed3(lapso.ed3);
-	tele->set_ed4(lapso.ed4);
-	tele->set_ed5(lapso.ed5);
-	tele->set_ed6(lapso.ed6);
-	tele->set_ed7(lapso.ed7);
-	tele->set_ed8(lapso.ed8);
-	tele->set_acelx(lapso.acelx);
-	tele->set_acely(lapso.acely);
-	tele->set_an1(lapso.an1);
-	tele->set_an2(lapso.an2);
-	tele->set_an3(lapso.an3);
-	tele->set_an4(lapso.an4);
-	tele->set_operacao(lapso.operacao);
+	tele->trecho = lapso.idTrecho;
+	tele->dataHora = lapso.timestamp;
+	tele->velocidade = lapso.velocidade;
+	tele->rpm = lapso.rpm;
+	tele->odometro = lapso.odometro;
+	tele->horimetro = lapso.horimetro;
+	tele->ed1 = lapso.ed1;
+	tele->ed2 = lapso.ed2;
+	tele->ed3 = lapso.ed3;
+	tele->ed4 = lapso.ed4;
+	tele->ed5 = lapso.ed5;
+	tele->ed6 = lapso.ed6;
+	tele->ed7 = lapso.ed7;
+	tele->ed8 = lapso.ed8;
+	tele->acelX = lapso.acelx;
+	tele->acelY = lapso.acely;
+	tele->an1 = lapso.an1;
+	tele->an2 = lapso.an2;
+	tele->an3 = lapso.an3;
+	tele->an4 = lapso.an4;
+	tele->operacao = lapso.operacao;
 }
 
 // Transform a sLapse struct in a persistable text format
