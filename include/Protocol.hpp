@@ -38,25 +38,134 @@ namespace BTCloud {
 class Protocol
 {
 	public:
+		/** \brief Protocol - Default constructor. */
 		Protocol();
+
+		/** \brief ~Protocol - Default destructor. */
 		virtual ~Protocol();
+
+		/** \brief Process -.
+		 *
+		 * \param path const char*
+		 * \param len int
+		 * \param dbClient DBClientConnection*
+		 * \return void
+		 */
 		void Process(const char *path, int len, mongo::DBClientConnection *dbClient);
+
+		/** \brief FillDataContract -.
+		 *
+		 * \param clientName string
+		 * \param plate string
+		 * \param retorno DataCache&
+		 * \return void
+		 */
 		void FillDataContract(string clientName, std::string plate, DataCache &retorno);
+
+		/** \brief ParseData -.
+		 *
+		 * \param dados string
+		 * \param ponteiroIni int
+		 * \param ponteiroFim int
+		 * \param arquivo int
+		 * \return void
+		 */
 		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo);
 
 	private:
+		/** \brief CreatePosition -.
+		 *
+		 * \return void
+		 */
 		void CreatePosition();
+
+		/** \brief GetLastPosition -.
+		 *
+		 * \param vehicleId uint32_t
+		 * \param lastPositionDate uint64_t
+		 * \return void
+		 */
 		uint64_t GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate);
+
+		/** \brief UpdateLastPosition -.
+		 *
+		 * \param vehicleId int
+		 * \return void
+		 */
 		void UpdateLastPosition(int vehicleId);
+
+		/** \brief GetClientData -.
+		 *
+		 * \param retorno DataCache&
+		 * \param chave string
+		 * \return void
+		 */
 		void GetClientData(DataCache &retorno, std::string chave);
-		uint32_t GetClient(std::string clientName);
-		uint32_t CreateClient(std::string clientName);
+
+		/** \brief GetClient -.
+		 *
+		 * \param clientName string
+		 * \return uint32_t
+		 */
+		uint32_t GetClient(string clientName);
+
+		/** \brief CreateClient -.
+		 *
+		 * \param clientName string
+		 * \return uint32_t
+		 */
+		uint32_t CreateClient(string clientName);
+
+		/** \brief CreateEquipment -.
+		 *
+		 * \param projectId uint32_t
+		 * \param equipIMei uint32_t
+		 * \param clientName string
+		 * \return uint32_t
+		 */
 		uint32_t CreateEquipment(uint32_t projectId, uint32_t equipIMei);
+
+		/** \brief CreateVehicle -.
+		 *
+		 * \param clientId uint32_t
+		 * \param equipId uint32_t
+		 * \param plate string
+		 * \return uint32_t
+		 */
 		uint32_t CreateVehicle(uint32_t clientId, uint32_t equipId, string plate);
 
+		/** \brief ParseHFULL -.
+		 *
+		 * \param strHfull string
+		 * \param ponteiroIni unsigned int
+		 * \param ponteiroFim unsigned int
+		 * \param arquivo unsigned int
+		 * \return void
+		 */
 		void ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo);
+
+		/** \brief ParseA3A5A7 -.
+		 *
+		 * \param ponteiroIni unsigned int
+		 * \param arquivo unsigned int
+		 * \return void
+		 */
 		void ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo);
+
+		/** \brief ParseHSYNS -.
+		 *
+		 * \param hsyns string
+		 * \param arquivo unsigned int
+		 * \param ponteiroFim unsigned int
+		 * \return void
+		 */
 		void ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim);
+
+		/** \brief ParseHSYNC -.
+		 *
+		 * \param hsync string
+		 * \return void
+		 */
 		void ParseHSYNC(string hsync);
 
 	private:

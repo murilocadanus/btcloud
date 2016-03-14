@@ -102,7 +102,7 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	//hfull.reservado10;
 	//hfull.hfull[5];
 
-	cFileManager.saveHfull(dataCache.veioId, hfull);
+	cFileManager.SaveHfull(dataCache.veioId, hfull);
 
 	Dbg(TAG "Fixing file cursor before and after HFULL");
 
@@ -116,14 +116,14 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 		Dbg(TAG "HFULL + TEMP");
 
 		// Remove this to overwrite it
-		cFileManager.delFile(dataCache.veioId, header.headerFile);
+		cFileManager.DelFile(dataCache.veioId, header.headerFile);
 
 		// Update the start cursor
 		header.beginPointer -= 512;
 
 		// Save changes
 		Dbg(TAG "Saving buffer file header data type %d", /*dec, */ header.dataType);
-		cFileManager.saveBufferFile(dataCache.veioId, tBuffer, tSize, header);
+		cFileManager.SaveBufferFile(dataCache.veioId, tBuffer, tSize, header);
 	}
 
 	// Verify case something matches at the start of this HFULL
@@ -136,14 +136,14 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 		Dbg(TAG "TEMP + HFULL");
 
 		// Remove this to overwrite it
-		cFileManager.delFile(dataCache.veioId, header.headerFile);
+		cFileManager.DelFile(dataCache.veioId, header.headerFile);
 
 		// Update the end cursor
 		header.endPointer += 512;
 
 		// Save changes
 		Dbg(TAG "Saving buffer file header data type %d", /*dec, */ header.dataType);
-		cFileManager.saveBufferFile(dataCache.veioId, tBuffer, tSize, header);
+		cFileManager.SaveBufferFile(dataCache.veioId, tBuffer, tSize, header);
 	}
 }
 
@@ -170,20 +170,20 @@ void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
 		{
 			case Bluetec::enumDataType::HSYNS_DADOS:
 				Dbg(TAG "Route completed, removing from temp memory");
-				cFileManager.delFile(dataCache.veioId, header.headerFile);
+				cFileManager.DelFile(dataCache.veioId, header.headerFile);
 			break;
 
 			case Bluetec::enumDataType::DADOS:
 				Dbg(TAG "Route incomplete, increasing end route point");
 
 				// Remove this temp file to overwrite it
-				cFileManager.delFile(dataCache.veioId, header.headerFile);
+				cFileManager.DelFile(dataCache.veioId, header.headerFile);
 
 				// Update the data type
 				header.dataType = Bluetec::enumDataType::DADOS_FINAL;
 
 				// Save it
-				cFileManager.saveBufferFile(dataCache.veioId, tBuffer, tSize, header);
+				cFileManager.SaveBufferFile(dataCache.veioId, tBuffer, tSize, header);
 			break;
 		}
 	}
@@ -195,7 +195,7 @@ void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
 		header.dataType = Bluetec::enumDataType::FINAL;
 
 		Dbg(TAG "Save buffer file header data type");
-		cFileManager.saveBufferFile(dataCache.veioId, tBuffer, (uint32_t)0, header);
+		cFileManager.SaveBufferFile(dataCache.veioId, tBuffer, (uint32_t)0, header);
 	}
 }
 
@@ -207,7 +207,7 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	Bluetec::HeaderDataFile header;
 	string pLapso;
 
-	lapso.idTrecho = cFileManager.getNextIdTrecho();
+	lapso.idTrecho = cFileManager.GetNextIdRoute();
 	lapso.timestamp = 0;
 	lapso.velocidade = 0;
 	lapso.rpm = 0;
@@ -226,7 +226,7 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	lapso.an3 = 0;
 	lapso.an4 = 0;
 
-	lapso.timestamp = mktime(BTCloud::Util::ParseDataHora(hsyns.substr(8, 7)));
+	lapso.timestamp = mktime(BTCloud::Util::ParseTimeDate(hsyns.substr(8, 7)));
 
 	// Load driver ibutton in bcd
 	lapso.ibtMotorista = "";
@@ -250,15 +250,15 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 
 	Dbg(TAG "Parse timestamp Hex 0x%x", /*dec, */ hsyns.substr(8, 7).c_str());
 	Dbg(TAG "Parse timestamp %d", /*dec, */ lapso.timestamp);
-	lapso.odometro = BTCloud::Util::ParseOdometro(hsyns.substr(15, 3));
+	lapso.odometro = BTCloud::Util::ParseHodometer(hsyns.substr(15, 3));
 
 	Dbg(TAG "Parse odometer %d", /*dec, */ lapso.odometro);
 	Dbg(TAG "%d %d %d %d - %d %d %d %d", /*dec, */ hex, setw(2), setfill('0'), int((unsigned char)hsyns.at(0)), hex, setw(2), setfill('0'), int((unsigned char)hsyns.at(hsyns.length() - 1)));
-	lapso.horimetro = BTCloud::Util::ParseHorimetro(hsyns.substr(18, 3));
+	lapso.horimetro = BTCloud::Util::ParseHourmeter(hsyns.substr(18, 3));
 
 	Dbg(TAG "Parse horimeter %d", /*dec, */ lapso.horimetro);
 
-	pLapso = BTCloud::Util::PersistableLapso(&lapso);
+	pLapso = BTCloud::Util::PersistableLapse(&lapso);
 
 	header.file = arquivo;
 	header.endPointer = ponteiroFim;
@@ -273,7 +273,7 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	Dbg(TAG "Save buffer file Enum data type %d", /*dec,*/ Bluetec::enumDataType::HSYNS);
 
 	Dbg(TAG "IMC 2 - header.dataType = %d", header.dataType);
-	cFileManager.saveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
+	cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
 }
 
 void Protocol::CreatePosition()
@@ -463,7 +463,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	Dbg(TAG "Processing data %d %d...", ponteiroIni, ponteiroFim);
 	Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)dados.at(0)), hex, setw(2), setfill('0'), int((unsigned char)dados.at(dados.length()-1)));
 
-	if(!cFileManager.getHfull(dataCache.veioId, hfull))
+	if(!cFileManager.GetHfull(dataCache.veioId, hfull))
 	{
 		hfull.lapso = Bluetec::enumDefaultValues::LAPSO;
 		hfull.acely = Bluetec::enumDefaultValues::ACELY;
@@ -494,7 +494,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 				tipoDado = Bluetec::enumDataType::HSYNS_DADOS;
 
 				// Clean the temporary lapse
-				cFileManager.delFile(dataCache.veioId, header.headerFile);
+				cFileManager.DelFile(dataCache.veioId, header.headerFile);
 			break;
 
 			case Bluetec::enumDataType::DADOS:
@@ -502,7 +502,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 				dados = string(tBuffer) + dados;
 
 				// Clean file temporarily to overwrite it
-				cFileManager.delFile(dataCache.veioId, header.headerFile);
+				cFileManager.DelFile(dataCache.veioId, header.headerFile);
 				tipoDado = Bluetec::enumDataType::DADOS;
 			break;
 		}
@@ -529,7 +529,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 				dados = dados + string(tBuffer);
 
 				// Clean file temporarily to overwrite it
-				cFileManager.delFile(dataCache.veioId, header.headerFile);
+				cFileManager.DelFile(dataCache.veioId, header.headerFile);
 				tipoDado = Bluetec::enumDataType::DADOS;
 			break;
 
@@ -540,7 +540,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 					dados = dados + string(tBuffer);
 
 				// Clean file temporarily to overwrite it
-				cFileManager.delFile(dataCache.veioId, header.headerFile);
+				cFileManager.DelFile(dataCache.veioId, header.headerFile);
 
 				// Verify if has an opened route
 				if(tipoDado != Bluetec::enumDataType::DADOS)
@@ -562,7 +562,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		header.dataType = tipoDado;
 
 		Dbg(TAG "Save buffer file header data type %d", header.dataType);
-		cFileManager.saveBufferFile(dataCache.veioId, dados.c_str(), dados.length(), header);
+		cFileManager.SaveBufferFile(dataCache.veioId, dados.c_str(), dados.length(), header);
 	}
 	else if(tipoDado)
 	{
@@ -576,7 +576,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 				// Calc control byte size
 				bufferControle[0] = dados.at(index);
 				controle = (BTCloud::Util::Output*) bufferControle;
-				tamLapso = BTCloud::Util::TamanhoLapso(controle);
+				tamLapso = BTCloud::Util::LapseSize(controle);
 
 				// Case the expasion bit is enable, calc the expasion byte
 				if(controle->saida0 && index + 1 <= fim)
@@ -586,7 +586,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 					bufferExpansao[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
 					expansao = (BTCloud::Util::Output*) bufferExpansao;
-					tamLapso += (BTCloud::Util::TamanhoLapsoExpansao(expansao) + 1);
+					tamLapso += (BTCloud::Util::ExpasionSize(expansao) + 1);
 				}
 
 				// Validate route lapse at this point
@@ -763,7 +763,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 					}
 					else
 					{
-						BTCloud::Util::LapsoToTelemetria(pTelemetry, lapso);
+						BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 					}
 					lapso.timestamp += hfull.lapso;
 				}
@@ -790,10 +790,10 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			header.endPointer = ponteiroFim;
 			header.file = arquivo;
 			header.idTrecho = lapso.idTrecho;
-			string pLapso = BTCloud::Util::PersistableLapso(&lapso);
+			string pLapso = BTCloud::Util::PersistableLapse(&lapso);
 
 			Dbg(TAG "Save buffer file header data type %d", header.dataType);
-			cFileManager.saveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
+			cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
 		}
 	}
 }
@@ -978,7 +978,7 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 
 void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbClient)
 {
-	cFileManager.setPath(pConfiguration->GetAppListeningPath());
+	cFileManager.SetPath(pConfiguration->GetAppListeningPath());
 
 	pDBClientConnection = dbClient;
 
@@ -1215,7 +1215,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 		// Rename file to set as processed
 		string newPath = "";
 		Util::CreateFileNameProcessed(&newPath, tokens);
-		cFileManager.renameFile(path, newPath);
+		cFileManager.RenameFile(path, newPath);
 	}
 }
 

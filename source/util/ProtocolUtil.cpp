@@ -84,7 +84,7 @@ void LapsoSetup(string lapso, struct Lapse& setup)
 	Dbg(TAG "Index: %d ibtMotorista: %s", index, setup.ibtMotorista.c_str());
 }
 
-void LapsoToTelemetria(Entities::Telemetry *tele, struct Lapse& lapso)
+void LapsoToTelemetry(Entities::Telemetry *tele, struct Lapse& lapso)
 {
 	tele->stretch = lapso.idTrecho;
 	tele->dateTime = lapso.timestamp;
@@ -110,7 +110,7 @@ void LapsoToTelemetria(Entities::Telemetry *tele, struct Lapse& lapso)
 }
 
 // Transform a sLapse struct in a persistable text format
-string PersistableLapso(Lapse *l)
+string PersistableLapse(Lapse *l)
 {
 	if( l == NULL )
 	{
@@ -125,7 +125,7 @@ string PersistableLapso(Lapse *l)
 }
 
 // Receive the expansion byte and calculates his size
-int TamanhoLapsoExpansao(char expansao)
+int ExpasionSize(char expansao)
 {
 	char buffer[255];
 	buffer[0] = expansao;
@@ -136,13 +136,13 @@ int TamanhoLapsoExpansao(char expansao)
 }
 
 // Receive a struct with the binary output from control byte and calc lapse size
-int TamanhoLapsoExpansao(Output *p)
+int ExpasionSize(Output *p)
 {
 	return (p->saida3 * 7) + p->saida4 + p->saida5 + p->saida6 + (p->saida7 * 2);
 }
 
 // Receive the control byte with the expansion and calc lapse size
-int TamanhoLapso(char controle, char expansao)
+int LapseSize(char controle, char expansao)
 {
 	char buffer[255];
 	buffer[0] = controle;
@@ -152,13 +152,13 @@ int TamanhoLapso(char controle, char expansao)
 
 	if(p->saida0)
 	{
-		return 1 + p->saida1 + p->saida2 + p->saida3 + p->saida4 + p->saida5 + TamanhoLapsoExpansao(expansao);
+		return 1 + p->saida1 + p->saida2 + p->saida3 + p->saida4 + p->saida5 + ExpasionSize(expansao);
 	}
 	return p->saida1 + p->saida2 + p->saida3 + p->saida4 + p->saida5;
 }
 
 // Receive a struct with the binary output from control byte and calc lapse size
-int TamanhoLapso(Output *p)
+int LapseSize(Output *p)
 {
 	return p->saida1 + p->saida2 + p->saida3 + p->saida4 + p->saida5;
 }
@@ -173,7 +173,7 @@ string ParseBCDString(unsigned char byte)
 	return to_string( byte / 16 * 10 ) + to_string( byte % 16 );
 }
 
-tm* ParseDataHora(string data)
+tm* ParseTimeDate(string data)
 {
 	struct tm *dataHora;
 	time_t currentTime = 0;
@@ -193,7 +193,7 @@ tm* ParseDataHora(string data)
 	return dataHora;
 }
 
-string ParseHora(string hora)
+string ParseTime(string hora)
 {
 	string parsedHora;
 
@@ -204,7 +204,7 @@ string ParseHora(string hora)
 	return parsedHora;
 }
 
-double ParseOdometro(string odometro)
+double ParseHodometer(string odometro)
 {
 	//cout << "0 "<< dec << ((double)((unsigned char)odometro.at(0)*65536)) << endl;
 	//cout << "1 "<< dec << ((double)((unsigned char)odometro.at(1)*256))<< endl;
@@ -212,7 +212,7 @@ double ParseOdometro(string odometro)
 	return ( ( (double ) ( (unsigned char ) odometro.at( 0 ) * 65536 ) ) + ( (double ) ( (unsigned char ) odometro.at( 1 ) * 256 ) ) + (double ) ( (unsigned char ) odometro.at( 2 ) ) ) / 10;
 }
 
-double ParseHorimetro(string horimetro)
+double ParseHourmeter(string horimetro)
 {
 	/*cout << hex << setw(2) << setfill('0') << int((unsigned char)horimetro.at(0));
 		cout << hex << setw(2) << setfill('0') << int((unsigned char)horimetro.at(horimetro.length()-1));

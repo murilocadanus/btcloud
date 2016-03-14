@@ -51,7 +51,7 @@ bool BTCloudApp::Initialize()
 	Info(TAG "Connected to mongodb");
 
 	// TODO Refactory to remove this
-	cFileManager.setPath(pConfiguration->GetAppListeningPath());
+	cFileManager.SetPath(pConfiguration->GetAppListeningPath());
 
 	return true;
 }

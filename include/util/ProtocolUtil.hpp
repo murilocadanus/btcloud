@@ -25,6 +25,9 @@ using namespace std;
 
 namespace BTCloud { namespace Util {
 
+	/** \class Output
+	 *  \brief This entity contains output data signals.
+	 */
 	typedef struct Output
 	{
 			unsigned int saida0 :1;
@@ -37,6 +40,9 @@ namespace BTCloud { namespace Util {
 			unsigned int saida7 :1;
 	}__attribute__ ((packed)) Output;
 
+	/** \class Lapse
+	 *  \brief This entity contains lapse data.
+	 */
 	typedef struct Lapse
 	{
 			//long int timestamp
@@ -64,23 +70,131 @@ namespace BTCloud { namespace Util {
 			std::string ibtMotorista;
 	} Lapse;
 
+	/** \brief LapsoSetup - .
+	 *
+	 * \param lapse string
+	 * \param setup struct Lapse&
+	 * \return void
+	 */
 	void LapsoSetup(string lapso, struct Lapse& setup);
-	void LapsoToTelemetria(Entities::Telemetry *tele, struct Lapse& lapso);
-	string PersistableLapso(Lapse *l);
-	int TamanhoLapsoExpansao(char expansao);
-	int TamanhoLapsoExpansao(Output *p);
-	int TamanhoLapso(char controle, char expansao);
-	int TamanhoLapso(Output *p);
+
+	/** \brief LapsoToTelemetry - .
+	 *
+	 * \param tele Telemetry*
+	 * \param lapso struct Lapse&
+	 * \return void
+	 */
+	void LapsoToTelemetry(Entities::Telemetry *tele, struct Lapse& lapso);
+
+	/** \brief PersistableLapse - .
+	 *
+	 * \param l Lapse*
+	 * \return string
+	 */
+	string PersistableLapse(Lapse *l);
+
+	/** \brief ExpasionSize - .
+	 *
+	 * \param expansao char
+	 * \return int
+	 */
+	int ExpasionSize(char expansao);
+
+	/** \brief ExpasionSize - .
+	 *
+	 * \param p Output*
+	 * \return int
+	 */
+	int ExpasionSize(Output *p);
+
+	/** \brief LapseSize - .
+	 *
+	 * \param controle char
+	 * \param expansao char
+	 * \return int
+	 */
+	int LapseSize(char controle, char expansao);
+
+	/** \brief LapseSize - .
+	 *
+	 * \param p Output*
+	 * \return int
+	 */
+	int LapseSize(Output *p);
+
+	/** \brief ParseBCDDecimal - .
+	 *
+	 * \param byte unsigned char
+	 * \return int
+	 */
 	int ParseBCDDecimal(unsigned char byte);
+
+	/** \brief ParseBCDString - .
+	 *
+	 * \param byte unsigned char
+	 * \return string
+	 */
 	string ParseBCDString(unsigned char byte);
-	tm* ParseDataHora(string data);
-	string ParseHora(string hora);
-	double ParseOdometro(string odometro);
-	double ParseHorimetro(string horimetro);
+
+	/** \brief ParseDataHora - .
+	 *
+	 * \param data string
+	 * \return tm*
+	 */
+	tm* ParseTimeDate(string data);
+
+	/** \brief ParseTime - .
+	 *
+	 * \param hora string
+	 * \return string
+	 */
+	string ParseTime(string hora);
+
+	/** \brief ParseHodometer - .
+	 *
+	 * \param odometro string
+	 * \return double
+	 */
+	double ParseHodometer(string odometro);
+
+	/** \brief ParseHourmeter - .
+	 *
+	 * \param horimetro string
+	 * \return double
+	 */
+	double ParseHourmeter(string horimetro);
+
+	/** \brief ParseLatLong - .
+	 *
+	 * \param operacao string
+	 * \return double
+	 */
 	double ParseLatLong(string operacao);
+
+	/** \brief ParseLatitude - .
+	 *
+	 * \param operacao string
+	 * \param yAxis int
+	 * \return double
+	 */
 	double ParseLatitude(string operacao, int yAxis);
+
+	/** \brief ParseLongitude - .
+	 *
+	 * \param operacao string
+	 * \param xAxis int
+	 * \param complemento int
+	 * \return double
+	 */
 	double ParseLongitude(string operacao, int xAxis, int complemento);
-	void CreateFileNameProcessed(string *newPath, std::vector<string> tokens);
+
+	/** \brief CreateFileNameProcessed - .
+	 *
+	 * \param newPath string*
+	 * \param xtokens vector<string>
+	 * \return double
+	 */
+	void CreateFileNameProcessed(string *newPath, vector<string> tokens);
 
 }} // namespace
 

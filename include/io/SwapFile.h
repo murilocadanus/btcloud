@@ -26,20 +26,29 @@ namespace Bluetec {
 class SwapFile : public File
 {
 	public:
+		/** \brief SwapFile - Default constructor. */
 		SwapFile();
+
+		/** \brief ~SwapFile - Default destructor. */
 		virtual ~SwapFile();
 
-		/*
-		 * Salva o buffer em um arquivo de swap e posteriormente move para o arquivo original.
+		/** \brief SaveBufferFile - Save buffer in a swap file.
+		 *
+		 * \param pathFile string
+		 * \param bufferFile const char*
+		 * \return void
 		 */
 		virtual void SaveBufferFile(std::string pathFile, const char *bufferFile, uint32_t sizeBufferFile);
 
-		/*
-		 * Retorna o arquivo em um buffer.
+		/** \brief GetBufferFile - Return buffer file.
+		 *
+		 * \param pathFile string
+		 * \param bufferFile const char*
+		 * \return bool
 		 */
 		virtual bool GetBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeBufferFile);
 };
 
-} /* namespace bluetec */
+} // namespace
 
-#endif /* SWAPFILE_H_ */
+#endif // SWAPFILE_H_

@@ -23,6 +23,8 @@
 #include "io/FileMod.h"
 #include "io/SwapFile.h"
 
+using namespace std;
+
 namespace Bluetec {
 
 #define NAME_INDEX_FILE "file.idx"
@@ -139,61 +141,132 @@ struct HFull
 class BlueTecFileManager
 {
 	public:
+		/** \brief BlueTecFileManager - Default constructor. */
 		BlueTecFileManager();
-		BlueTecFileManager(std::string path);
-		virtual ~BlueTecFileManager();
-		virtual void setPath(std::string path);
 
-		/* se pointer = 0 pesquisar o ultimo ponteiro indendente do "file". */
-		/*
-		 * Retorna o buffer para um determinado arquivo.
+		/** \brief BlueTecFileManager - Overwritten constructor. */
+		BlueTecFileManager(string path);
+
+		/** \brief ~SwapFile - Default destructor. */
+		virtual ~BlueTecFileManager();
+
+		/** \brief SetPath - Save buffer in a swap file.
+		 *
+		 * \param path string
+		 * \return void
+		 */
+		virtual void SetPath(string path);
+
+		/** \brief GetBufferFile - Return buffer file.
+		 *
+		 * \param veioid uint32_t
+		 * \param pointer uint32_t
+		 * \param file uint16_t
+		 * \param bufferFile char*
+		 * \param sizeBufferFile uint32_t&
+		 * \param bluetecHeaderFile struct HeaderDataFile&
+		 * \return bool
 		 */
 		virtual bool getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct HeaderDataFile& bluetecHeaderFile);
 
-		/*
-		 * Salva o buffer em um determinado arquivo.
+		/** \brief SaveBufferFile - Save buffer file.
+		 *
+		 * \param veioid uint32_t
+		 * \param pointer uint32_t
+		 * \param file uint16_t
+		 * \param bufferFile char*
+		 * \param sizeBufferFile uint32_t&
+		 * \param bluetecHeaderFile struct HeaderDataFile&
+		 * \return bool
 		 */
-		virtual void saveBufferFile(uint32_t veioid, const char *bufferFile, uint32_t sizeBufferFile, struct HeaderDataFile& bluetecHeaderFile);
+		virtual void SaveBufferFile(uint32_t veioid, const char *bufferFile, uint32_t sizeBufferFile, struct HeaderDataFile& bluetecHeaderFile);
 
-		/*
-		 * Rename file at disk
+		/** \brief RenameFile - Rename file at disk.
+		 *
+		 * \param pathFileOld string
+		 * \param pathFileNew string
+		 * \return void
 		 */
-		void renameFile(std::string pathFileOld, std::string pathFileNew);
+		void RenameFile(string pathFileOld, string pathFileNew);
 
-		/*
-		 * Remove um arquivo fisicamente.
+		/** \brief DelFile - Remove file at disk.
+		 *
+		 * \param veioid uint32_t
+		 * \param file DataFile
+		 * \return void
 		 */
-		virtual void delFile(uint32_t veioid, DataFile file);
+		virtual void DelFile(uint32_t veioid, DataFile file);
 
 		/*
 		 * Retorna um novo id de trecho.
 		 */
-		virtual uint32_t getNextIdTrecho();
 
-		/*
-		 * Retorna o HFUll de um equipamento especifico.
+		/** \brief DelFile - Return a new id of route.
+		 *
+		 * \return uint32_t
 		 */
-		virtual bool getHfull(uint32_t veioid, HFull& hfull);
+		virtual uint32_t GetNextIdRoute();
 
-		/*
-		 * Salva salva o hfull do equipamento especifico.
+		/** \brief DelFile - Return HFull from specific file.
+		 *
+		 * \return uint32_t
 		 */
-		virtual void saveHfull(uint32_t veioid, HFull& hfull);
+		virtual bool GetHfull(uint32_t veioid, HFull& hfull);
 
+		/** \brief SaveHfull - Save HFull from specific file.
+		 *
+		 * \param veioid uint32_t
+		 * \param hfull HFull&
+		 * \return uint32_t
+		 */
+		virtual void SaveHfull(uint32_t veioid, HFull& hfull);
 
 	private:
-		/* Para garantir uma copia do arquivo... */
+
+		/** \brief Vacuum - Clean free space at disk used by a long period of time.
+		 *
+		 * \param veioid uint32_t
+		 * \param listBluetecHeaderFile vector<struct HeaderDataFile*>*
+		 * \return uint32_t
+		 */
+		virtual void Vacuum(uint32_t veioid, vector<struct HeaderDataFile*> *listBluetecHeaderFile);
+
+		/** \brief GetsBluetecHeaderFile - Get header file bluetec.
+		 *
+		 * \param veioid uint32_t
+		 * \param pointer uint32_t
+		 * \param file uint16_t
+		 * \param bluetecHeaderFile struct HeaderDataFile&
+		 * \return bool
+		 */
+		virtual bool GetsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct HeaderDataFile& bluetecHeaderFile);
+
+		/** \brief GetListsBluetecHeaderFile - Get header file.
+		 *
+		 * \param veioid uint32_t
+		 * \return vector<struct HeaderDataFile*> *
+		 */
+		virtual vector<struct HeaderDataFile*> *GetListsBluetecHeaderFile(uint32_t veioid);
+
+		/** \brief SaveIndexFile - Save index to file.
+		 *
+		 * \param veioid uint32_t
+		 * \param listBluetecHeaderFile vector<struct HeaderDataFile*>*
+		 * \return void
+		 */
+		virtual void SaveIndexFile(uint32_t veioid, vector<struct HeaderDataFile*> *listBluetecHeaderFile);
+
+		/** \brief DeleteIndexFileObject - Delete index file.
+		 *
+		 * \param listBluetecHeaderFile vector<struct HeaderDataFile*>*
+		 * \return void
+		 */
+		virtual void DeleteIndexFileObject(vector<struct HeaderDataFile*> *listBluetecHeaderFile);
+
+	private:
 		SwapFile swap;
 		FileMod files;
-		virtual bool getsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct HeaderDataFile& bluetecHeaderFile);
-		virtual std::vector<struct HeaderDataFile*> *getListsBluetecHeaderFile(uint32_t veioid);
-		virtual void saveIndexFile(uint32_t veioid, std::vector<struct HeaderDataFile*> *listBluetecHeaderFile);
-		virtual void deleteIndexFileObject(std::vector<struct HeaderDataFile*> *listBluetecHeaderFile);
 
-		/*
-		 * Libera espaço em disco utilizado pelos registros que estão armazenadas a mais de n dias.
-		 */
-		virtual void vacuum(uint32_t veioid, std::vector<struct HeaderDataFile*> *listBluetecHeaderFile);
 };
 
 } // namespace

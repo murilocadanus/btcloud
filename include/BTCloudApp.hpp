@@ -21,7 +21,7 @@
 #include <iostream>
 #include <api/mysql/MySQLConnector.hpp>
 #include <interface/IEventFileSystemListener.hpp>
-#include <mongo/client/dbclient.h> // for the driver
+#include <mongo/client/dbclient.h>
 #include "managers/BlueTecFileManager.h"
 #include "Defines.hpp"
 #include "Configuration.hpp"
@@ -42,7 +42,10 @@ namespace BTCloud {
 class BTCloudApp : public IApp, public IEventFileSystemListener
 {
 	public:
+		/** \brief BTCloudApp - Default constructor. */
 		BTCloudApp();
+
+		/** \brief ~BTCloudApp - Default destructor. */
 		virtual ~BTCloudApp();
 
 		/** \brief Initialize - Code to be executed at the beggining of app.
