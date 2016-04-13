@@ -859,7 +859,7 @@ uint32_t Protocol::GetClient(std::string clientName)
 							 , pConfiguration->GetMySQLScheme());
 
 	string query("");
-	query.append("SELECT id FROM clientes WHERE clinome = '").append(clientName).append("')");
+	query.append("SELECT id FROM clientes WHERE clinome = '").append(clientName).append("'");
 
 	// Get client id
 	if(pMysqlConnector->Execute(query))
