@@ -160,7 +160,7 @@ std::vector<struct HeaderDataFile*> *BlueTecFileManager::GetListsBluetecHeaderFi
 	}
 	catch(IFile::FileNotFoundException &)
 	{
-		Error(TAG "Warning: Index of file does not exist");
+		//Error(TAG "Warning: Index of file does not exist");
 	}
 	catch(IFile::FileReadException &)
 	{

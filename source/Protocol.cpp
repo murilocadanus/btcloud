@@ -860,6 +860,7 @@ uint32_t Protocol::GetClient(std::string clientName)
 
 	string query("");
 	query.append("SELECT id FROM clientes WHERE clinome = '").append(clientName).append("'");
+	Dbg(TAG "Query: %s", query.c_str());
 
 	// Get client id
 	if(pMysqlConnector->Execute(query))

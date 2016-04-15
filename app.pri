@@ -7,7 +7,7 @@ INCLUDEPATH +=	include/ \
 				../libi9/include
 
 unix {
-	LIBS	+= -L ../libi9/lib -lI9 -pthread -lmongoclient -lcurl -lyajl -lboost_system -lboost_thread -lprotobuf -lmysqlclient
+	LIBS	+= -L ../libi9/lib -lI9 -pthread -lmongoclient -lcurl -lyajl -lboost_system -lboost_thread -lmysqlclient
 
 	#Configs
 	APP_CONFIG_FILES.files = $$files($${PWD}/resources/*.*)
