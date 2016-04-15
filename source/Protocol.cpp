@@ -1118,8 +1118,8 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					if(inicio < i - lHsyns)
 					{
 						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, lHsyns - 1);
-						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - lHsyns - 1)));
+						/*Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - lHsyns - 1)));*/
 
 						// Parse data
 						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo);
@@ -1128,11 +1128,13 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					if(inicio == i -  lHsyns)
 					{
 						Dbg(TAG "Creating file of type 3 from %d a %d", inicio, lHfull - 1);
-						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
+						/*Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));*/
 
 						// i is in 'H', count plus 4 pointers ahead, 'H' + 'SYNS'
 						Dbg(TAG "Params HSYNS %d %d %d + %d + 4", /*dec,*/ inicio, /*dec,*/ arquivo, /*dec, */ ponteiroIni, i);
+
+						Dbg(TAG "sbt4.substr(%d, %d)", inicio, lHsyns);
 
 						// Parse data
 						ParseHSYNS(sbt4.substr(inicio, lHsyns), arquivo, ponteiroIni + i + 4);
