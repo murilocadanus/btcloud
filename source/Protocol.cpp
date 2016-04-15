@@ -991,7 +991,11 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 			if(!clientId)
 				clientId = CreateClient(clientName);
 
-			uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), 1);
+			// Generate equipment imei
+			srand(time(NULL));
+			int imei = rand();
+
+			uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), imei);
 			uint32_t vehiId = CreateVehicle(clientId, equipId, plate);
 
 			retorno.veioId = vehiId;
