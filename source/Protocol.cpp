@@ -865,9 +865,12 @@ uint32_t Protocol::GetClient(std::string clientName)
 	// Get client id
 	if(pMysqlConnector->Execute(query))
 	{
+		Dbg(TAG "Query executed");
 		auto mysqlResult = pMysqlConnector->Result();
 		if(mysqlResult)
 		{
+			Dbg(TAG "Query resulted");
+
 			auto mysqlRow = pMysqlConnector->FetchRow(mysqlResult);
 			if(mysqlRow)
 			{
@@ -880,6 +883,7 @@ uint32_t Protocol::GetClient(std::string clientName)
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
 
+	Dbg(TAG "ClientID: %d", clientId);
 	return clientId;
 }
 
@@ -893,13 +897,20 @@ uint32_t Protocol::CreateClient(std::string clientName)
 
 	string query("");
 	query.append("INSERT INTO clientes SET clinome = '").append(clientName).append("'");
-	pMysqlConnector->Execute(query);
+	bool exec = pMysqlConnector->Execute(query);
+
+	Dbg(TAG "Query executed: %d", exec);
+
+	int id = 0;
+
+	// return inserted registry id
+	if(exec) id = pMysqlConnector->InsertedID();
 
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
 
-	// return inserted registry id
-	return pMysqlConnector->InsertedID();
+	Dbg(TAG "Inserted client id: %d", id);
+	return id;
 }
 
 uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
@@ -915,13 +926,20 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 			.append(", projetos_proj_id = ").append(std::to_string(projectId))
 			.append(", equip_imei = ").append(std::to_string(equipIMei))
 			.append(", equip_insert_datetime = CURRENT_TIMESTAMP");
-	pMysqlConnector->Execute(query);
+	bool exec = pMysqlConnector->Execute(query);
+
+	Dbg(TAG "Query executed: %d", exec);
+
+	int id = 0;
+
+	// return inserted registry id
+	if(exec) id = pMysqlConnector->InsertedID();
 
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
 
-	// return inserted registry id
-	return pMysqlConnector->InsertedID();
+	Dbg(TAG "Inserted equipment id: %d", id);
+	return id;
 }
 
 uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::string plate)
@@ -937,13 +955,20 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 			.append(", vei_clioid = ").append(std::to_string(clientId))
 			.append(", vei_equoid = ").append(std::to_string(equipId))
 			.append(", vei_placa = '").append(plate).append("'");
-	pMysqlConnector->Execute(query);
+	bool exec = pMysqlConnector->Execute(query);
+
+	Dbg(TAG "Query executed: %d", exec);
+
+	int id = 0;
+
+	// return inserted registry id
+	if(exec) id = pMysqlConnector->InsertedID();
 
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
 
-	// return inserted registry id
-	return pMysqlConnector->InsertedID();
+	Dbg(TAG "Inserted vehicle id: %d", id);
+	return id;
 }
 
 void Protocol::FillDataContract(std::string clientName, std::string plate, DataCache &retorno)
