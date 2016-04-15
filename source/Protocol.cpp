@@ -914,7 +914,7 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 	query.append("INSERT INTO equipamentos SET equip_id = default")
 			.append(", projetos_proj_id = ").append(std::to_string(projectId))
 			.append(", equip_imei = ").append(std::to_string(equipIMei))
-			.append(", equip_insert_time = CURRENT_TIMESTAMP");
+			.append(", equip_insert_datetime = CURRENT_TIMESTAMP");
 	pMysqlConnector->Execute(query);
 
 	// Diconnect from mysql
