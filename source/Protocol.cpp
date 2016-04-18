@@ -897,8 +897,9 @@ uint32_t Protocol::CreateClient(std::string clientName)
 
 	string query("");
 	query.append("INSERT INTO clientes SET clinome = '").append(clientName).append("'");
-	bool exec = pMysqlConnector->Execute(query);
+	Dbg(TAG "Query: %s", query.c_str());
 
+	bool exec = pMysqlConnector->Execute(query);
 	Dbg(TAG "Query executed: %d", exec);
 
 	int id = 0;
@@ -926,8 +927,9 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 			.append(", projetos_proj_id = ").append(std::to_string(projectId))
 			.append(", equip_imei = ").append(std::to_string(equipIMei))
 			.append(", equip_insert_datetime = CURRENT_TIMESTAMP");
-	bool exec = pMysqlConnector->Execute(query);
+	Dbg(TAG "Query: %s", query.c_str());
 
+	bool exec = pMysqlConnector->Execute(query);
 	Dbg(TAG "Query executed: %d", exec);
 
 	int id = 0;
@@ -955,8 +957,9 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 			.append(", vei_clioid = ").append(std::to_string(clientId))
 			.append(", vei_equoid = ").append(std::to_string(equipId))
 			.append(", vei_placa = '").append(plate).append("'");
-	bool exec = pMysqlConnector->Execute(query);
+	Dbg(TAG "Query: %s", query.c_str());
 
+	bool exec = pMysqlConnector->Execute(query);
 	Dbg(TAG "Query executed: %d", exec);
 
 	int id = 0;
@@ -995,7 +998,8 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 			srand(time(NULL));
 			int imei = rand();
 
-			uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), imei);
+			// FIX: Verify why 0 is returned from pConfiguration
+			uint32_t equipId = CreateEquipment(/*pConfiguration->GetProjectId()*/18, imei);
 			uint32_t vehiId = CreateVehicle(clientId, equipId, plate);
 
 			retorno.veioId = vehiId;
