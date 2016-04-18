@@ -1166,7 +1166,16 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						Dbg(TAG "sbt4.substr(%d, %d)", inicio, lHsyns);
 
 						// Parse data
-						ParseHSYNS(sbt4.substr(inicio, lHsyns), arquivo, ponteiroIni + i + 4);
+
+						// FIX: Change to parse a HSYNS splited into 2 files
+						try
+						{
+							ParseHSYNS(sbt4.substr(inicio, lHsyns), arquivo, ponteiroIni + i + 4);
+						}
+						catch (const std::out_of_range& e)
+						{
+							Error(TAG "Error %s. HSYNS sbt4.substr(%d, %d)", e.what(), inicio, lHsyns);
+						}
 
 						i += 5;
 						inicio = i;
