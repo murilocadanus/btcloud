@@ -1125,6 +1125,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 		}
 
 		std::string sbt4(bt4, bt4 + lSize);
+		Dbg(TAG "%s", sbt4.c_str());
 
 		size_t pos = 0;
 		int arquivo = (int) sbt4[1];
@@ -1148,7 +1149,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 		}
 		catch (const std::out_of_range& e)
 		{
-			Error(TAG "Error %s. HSYNS sbt4.substr(%d, %d)", e.what(), inicio, lHsyns);
+			Error(TAG "Error %s. sbt4.substr(%d - 8, 8)", e.what(), sbt4.length());
 			return;
 		}
 
