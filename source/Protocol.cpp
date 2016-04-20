@@ -362,7 +362,7 @@ void Protocol::CreatePosition()
 		else if(lastPositionDate < datePosition)
 		{
 			Dbg(TAG "Updating position at mongodb collection ultima_posicao");
-			UpdateLastPosition(dataCache.veioId);
+			UpdateLastPosition(dataCache.veioId, datePosition, dateArrival);
 		}
 		else
 			Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
@@ -401,12 +401,14 @@ uint64_t Protocol::GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate
 		return 0;
 }
 
-void Protocol::UpdateLastPosition(int vehicleId)
+void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64_t dateArrival)
 {
 	mongo::Query query = QUERY("veiculo" << vehicleId);
 
 	// Create update query
 	mongo::BSONObj querySet = BSON("$set" << BSON(
+										"data_posicao" << mongo::Date_t(datePosition) <<
+										"data_chegada" << mongo::Date_t(dateArrival) <<
 										"velocidade" << pTelemetry->velocity <<
 										"coordenadas" << BSON("Type" << "Point" <<
 															"coordinates" << BSON_ARRAY(pPosition->lon << pPosition->lat))

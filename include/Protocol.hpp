@@ -90,9 +90,11 @@ class Protocol
 		/** \brief UpdateLastPosition -.
 		 *
 		 * \param vehicleId int
+		 * \param datePosition u_int64_t
+		 * \param dateArrival u_int64_t
 		 * \return void
 		 */
-		void UpdateLastPosition(int vehicleId);
+		void UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64_t dateArrival);
 
 		/** \brief GetClientData -.
 		 *
