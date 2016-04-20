@@ -1152,7 +1152,6 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 		catch (const std::out_of_range& e)
 		{
 			Error(TAG "Error %s. sbt4.substr(%d - 8, 8)", e.what(), sbt4.length());
-			return;
 		}
 
 		lSize -= 13;
@@ -1244,7 +1243,6 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						catch (const std::out_of_range& e)
 						{
 							Error(TAG "Error %s. HSYNS sbt4.substr(%d, %d)", e.what(), inicio, lHsyns);
-							return;
 						}
 
 						i += 5;
@@ -1281,7 +1279,6 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						catch (const std::out_of_range& e)
 						{
 							Error(TAG "Error %s. ParseHFULL");
-							return;
 						}
 
 						i += 5;
