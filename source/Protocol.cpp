@@ -1139,8 +1139,19 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 
 		// For each 1200 bytes, the bluetec protocol generate a header with 5 characters at begin and 8 at end
 		// this characters must be removed
-		sbt4.erase(0, 5);
-		sbt4.erase(sbt4.length() - 8, 8);
+
+		// FIX: std::out_of_range
+		try
+		{
+			sbt4.erase(0, 5);
+			sbt4.erase(sbt4.length() - 8, 8);
+		}
+		catch (const std::out_of_range& e)
+		{
+			Error(TAG "Error %s. HSYNS sbt4.substr(%d, %d)", e.what(), inicio, lHsyns);
+			return;
+		}
+
 		lSize -= 13;
 
 		for(size_t i = 1200; i < sbt4.length(); i += 1200)
@@ -1230,6 +1241,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						catch (const std::out_of_range& e)
 						{
 							Error(TAG "Error %s. HSYNS sbt4.substr(%d, %d)", e.what(), inicio, lHsyns);
+							return;
 						}
 
 						i += 5;
@@ -1266,6 +1278,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						catch (const std::out_of_range& e)
 						{
 							Error(TAG "Error %s. ParseHFULL");
+							return;
 						}
 
 						i += 5;
