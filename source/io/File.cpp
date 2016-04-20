@@ -80,8 +80,6 @@ void File::CreateDir(std::string directory)
 
 	if(fdTemp == -1)
 	{
-		Error(TAG "Error when create a directory %d", strerror(errno));
-
 		if(errno != EEXIST)
 			throw PathCreateException();
 	}

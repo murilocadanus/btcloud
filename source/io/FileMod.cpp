@@ -55,8 +55,16 @@ void FileMod::SaveBufferFileVeioid(uint32_t veioid, const char *bufferFile, int 
 	}
 	catch(IFile::PathNotDefinedException &)
 	{
-		this->file->CreateDir(this->getIndice(veioid));
-		this->file->CreateDir(this->getDirectory(veioid));
+		try
+		{
+			this->file->CreateDir(this->getIndice(veioid));
+			this->file->CreateDir(this->getDirectory(veioid));
+		}
+		catch(IFile::PathCreateException &)
+		{
+			//Error(TAG "Error when create a directory %d", strerror(errno));
+		}
+
 		this->SaveBufferFileVeioid(veioid, bufferFile, sizeBufferFile, nameFile);
 	}
 }
