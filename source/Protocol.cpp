@@ -944,8 +944,10 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 	return id;
 }
 
-uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::string plate)
+uint32_t Protocol::GetVehicle(uint32_t equipId)
 {
+	uint32_t vehicleId = 0;
+
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
@@ -953,22 +955,71 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 							 , pConfiguration->GetMySQLScheme());
 
 	string query("");
+	query.append("SELECT veioid FROM veiculos WHERE vei_equoid = ").append(std::to_string(equipId));
+	Dbg(TAG "Query: %s", query.c_str());
+
+	// Get vehicle id
+	if(pMysqlConnector->Execute(query))
+	{
+		Dbg(TAG "Query executed");
+		auto mysqlResult = pMysqlConnector->Result();
+		if(mysqlResult)
+		{
+			Dbg(TAG "Query resulted");
+
+			auto mysqlRow = pMysqlConnector->FetchRow(mysqlResult);
+			if(mysqlRow)
+			{
+				vehicleId = atoi(mysqlRow[0]);
+				pMysqlConnector->FreeResult(mysqlResult);
+			}
+		}
+	}
+
+	// Diconnect from mysql
+	pMysqlConnector->Disconnect();
+
+	Dbg(TAG "ClientID: %d", vehicleId);
+	return vehicleId;
+}
+
+uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::string plate)
+{
+	//int vehicleId = GetVehicle(equipId);
+	int id = 0;
+
+	// Connect to mysql
+	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
+							 , pConfiguration->GetMySQLUser()
+							 , pConfiguration->GetMySQLPassword()
+							 , pConfiguration->GetMySQLScheme());
+
+	string query("");
+
+	/*query.append("UPDATE veiculos SET ")
+			.append("vei_clioid = ").append(std::to_string(clientId))
+			.append(", vei_placa = '").append(plate).append("'")
+			.append(", vei_alias = '").append(plate).append("'")
+			.append(" WHERE veioid = ").append(std::to_string(vehicleId));*/
+
 	query.append("INSERT INTO veiculos SET veioid = default")
 			.append(", vei_clioid = ").append(std::to_string(clientId))
 			.append(", vei_equoid = ").append(std::to_string(equipId))
 			.append(", vei_placa = '").append(plate).append("'");
+
 	Dbg(TAG "Query: %s", query.c_str());
 
 	bool exec = pMysqlConnector->Execute(query);
 	Dbg(TAG "Query executed: %d", exec);
-
-	int id = 0;
 
 	// return inserted registry id
 	if(exec) id = pMysqlConnector->InsertedID();
 
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
+
+	/*Dbg(TAG "Updated vehicle vei_equoid: %d", equipId);
+	return vehicleId;*/
 
 	Dbg(TAG "Inserted vehicle id: %d", id);
 	return id;
@@ -1203,12 +1254,19 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					if( inicio == i -  lHfull)
 					{
 						Dbg(TAG "Creating file of type 1 from %d a %d", inicio, i - 1);
-
-						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
+						/*Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
+							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));*/
 
 						// Parse data
-						ParseHFULL( sbt4.substr( inicio, i-inicio ), ponteiroIni+inicio, i+4, arquivo);
+						// FIX: Change to parse a HFULL
+						try
+						{
+							ParseHFULL(sbt4.substr(inicio, i-inicio), ponteiroIni+inicio, i+4, arquivo);
+						}
+						catch (const std::out_of_range& e)
+						{
+							Error(TAG "Error %s. ParseHFULL");
+						}
 
 						i += 5;
 						inicio = i;

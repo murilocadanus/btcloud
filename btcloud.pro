@@ -24,6 +24,3 @@ OTHER_FILES += resources/app.config \
 
 include("app.pri")
 include("compiler.pri")
-
-DISTFILES += \
-			resources/Model.json

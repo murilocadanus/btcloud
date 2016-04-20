@@ -125,6 +125,13 @@ class Protocol
 		 */
 		uint32_t CreateEquipment(uint32_t projectId, uint32_t equipIMei);
 
+		/** \brief GetVehicle -.
+		 *
+		 * \param clientName string
+		 * \return uint32_t
+		 */
+		uint32_t GetVehicle(uint32_t equipId);
+
 		/** \brief CreateVehicle -.
 		 *
 		 * \param clientId uint32_t
