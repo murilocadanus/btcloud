@@ -1127,7 +1127,6 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 		}
 
 		std::string sbt4(bt4, bt4 + lSize);
-		Dbg(TAG "%s", sbt4.c_str());
 
 		size_t pos = 0;
 		int arquivo = (int) sbt4[1];
