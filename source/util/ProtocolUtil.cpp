@@ -81,6 +81,11 @@ void LapsoSetup(string lapso, struct Lapse& setup)
 
 	index = lapso.find("##", index) + 2;
 	setup.ibtMotorista = lapso.substr(index, lapso.find("##", index) - 1);
+
+	// Force to keep maxium size
+	if(setup.ibtMotorista.size() > 14)
+		setup.ibtMotorista.resize(14);
+
 	Dbg(TAG "Index: %d ibtMotorista: %s", index, setup.ibtMotorista.c_str());
 }
 
@@ -165,12 +170,14 @@ int LapseSize(Output *p)
 
 int ParseBCDDecimal(unsigned char byte)
 {
-	return (unsigned int) (byte / 16 * 10 + byte % 16);
+	unsigned int data = (unsigned int) (byte / 16 * 10 + byte % 16);
+	return data;
 }
 
 string ParseBCDString(unsigned char byte)
 {
-	return to_string( byte / 16 * 10 ) + to_string( byte % 16 );
+	string data = to_string( byte / 16 * 10 ) + to_string( byte % 16 );
+	return data;
 }
 
 tm* ParseTimeDate(string data)

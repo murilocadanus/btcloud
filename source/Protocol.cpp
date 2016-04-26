@@ -230,24 +230,24 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 
 	// Load driver ibutton in bcd
 	lapso.ibtMotorista = "";
-	lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(1));
 
-	// Standardizes the operation code to empty 81
-	if(lapso.ibtMotorista == "81")
+	// Create a ostring to convert byte to hex with precision
+	std::ostringstream driverStream;
+	driverStream << std::hex << std::setfill('0');
+	driverStream << std::setw(2) << (int)hsyns.at(1); // 01 or 81
+
+	// Standardizes the operation code to not be empty (81)
+	if(driverStream.str() == "01")
 	{
-		// Default ibutton
-		lapso.ibtMotorista = "0";
-	}
-	else
-	{
-		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(2));
-		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(3));
-		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(4));
-		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(5));
-		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(6));
-		lapso.ibtMotorista += BTCloud::Util::ParseBCDDecimal(hsyns.at(7));
+		// Convert all driver info id to Hex
+		std::vector<unsigned char> driverElements {
+			hsyns.at(2), hsyns.at(3), hsyns.at(4), hsyns.at(5), hsyns.at(6), hsyns.at(7)
+		};
+		for(int elem : driverElements) driverStream << std::setw(2) << elem;
+		lapso.ibtMotorista += driverStream.str().c_str();
 	}
 
+	Dbg(TAG "Parse driver id: %s", lapso.ibtMotorista.c_str());
 	Dbg(TAG "Parse timestamp Hex 0x%x", /*dec, */ hsyns.substr(8, 7).c_str());
 	Dbg(TAG "Parse timestamp %d", /*dec, */ lapso.timestamp);
 	lapso.odometro = BTCloud::Util::ParseHodometer(hsyns.substr(15, 3));
@@ -305,6 +305,7 @@ void Protocol::CreatePosition()
 	std::string country = "";
 	std::string velocityStreet = "";
 	bool gps = true;
+	std::string driverId = pPosition->inf_motorista.id;
 
 	int32_t analogic1 = pTelemetry->an1;
 	int32_t analogic2 = pTelemetry->an2;
@@ -328,8 +329,8 @@ void Protocol::CreatePosition()
 				"data_posicao" << mongo::Date_t(datePosition) << "data_chegada" << mongo::Date_t(dateArrival) <<
 				"velocidade" << velocity <<	"endereco" << address << "bairro" << neighborhood << "municipio" << city
 				<< "estado" << province <<
-				"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2)) <<
-				"numero" << number << "pais" << country << "velocidade_via" << velocityStreet << "gps" << gps <<
+				"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2)) << "numero" << number <<
+				"pais" << country << "velocidade_via" << velocityStreet << "gps" << gps << "motorista_ibutton" << driverId <<
 				"entradas" << BSON("ignicao" << ignition << "entrada1" << false << "entrada2" << false << "entrada3" << false <<
 					"entrada4" << false << "entrada5" << false << "entrada6" << false << "entrada7" << false) <<
 				"saidas" << BSON("saida0" << false << "saida1" << false << "saida2" << false << "saida3" << false <<
@@ -409,6 +410,7 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 	mongo::BSONObj querySet = BSON("$set" << BSON(
 										"data_posicao" << mongo::Date_t(datePosition) <<
 										"data_chegada" << mongo::Date_t(dateArrival) <<
+										"motorista_ibutton" << pPosition->inf_motorista.id <<
 										"velocidade" << pTelemetry->velocity <<
 										"coordenadas" << BSON("Type" << "Point" <<
 															"coordinates" << BSON_ARRAY(pPosition->lon << pPosition->lat))
@@ -474,7 +476,6 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	}
 
 	Dbg(TAG "Searching data before this file...");
-
 	// Case some data exists
 	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni-1, arquivo, tBuffer, tSize, header) &&
 			header.endPointer == ponteiroIni-1 && header.file == arquivo)
@@ -491,6 +492,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			case Bluetec::enumDataType::HSYNS_DADOS:
 
 			case Bluetec::enumDataType::HSYNS:
+
 				// This route was already started then the first lapse must be restored
 				BTCloud::Util::LapsoSetup(tBuffer, lapso);
 				tipoDado = Bluetec::enumDataType::HSYNS_DADOS;
@@ -573,6 +575,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		fim = dados.length();
 		while(index < fim)
 		{
+			Dbg(TAG "%d < %d", index, fim);
 			try
 			{
 				// Calc control byte size
@@ -695,6 +698,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 								pPosition->lon = lon;
 								pPosition->dateTime = lapso.timestamp;
 								pPosition->dateArrive = pTimer->GetCurrentTime();
+								pPosition->inf_motorista.id = lapso.ibtMotorista;
 
 								if(lapso.rpm > 0 && lapso.velocidade > 0)
 									pEventFlag->ignition = 1;
@@ -792,6 +796,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			header.endPointer = ponteiroFim;
 			header.file = arquivo;
 			header.idTrecho = lapso.idTrecho;
+			Dbg(TAG "-> ibtMotorista: %s", lapso.ibtMotorista.c_str());
 			string pLapso = BTCloud::Util::PersistableLapse(&lapso);
 
 			Dbg(TAG "Save buffer file header data type %d", header.dataType);
@@ -1252,7 +1257,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 				else if(sbt4.compare(i, 5, "HFULL") == 0)
 				{
 					Dbg(TAG "Found the HFULL in %d", i);
-					if( inicio < i - lHfull )
+					if(inicio < i - lHfull)
 					{
 						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, lHfull - 1);
 						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
@@ -1263,7 +1268,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						inicio = i - lHfull;
 					}
 
-					if( inicio == i -  lHfull)
+					if(inicio == i -  lHfull)
 					{
 						Dbg(TAG "Creating file of type 1 from %d a %d", inicio, i - 1);
 						/*Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),

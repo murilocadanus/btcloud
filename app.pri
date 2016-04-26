@@ -6,8 +6,16 @@ CONFIG -= qt
 INCLUDEPATH +=	include/ \
 				../libi9/include
 
+CONFIG(debug, debug|release) {
+	TARGET = $${TARGET}-debug
+}
+
+CONFIG(release, debug|release) {
+	TARGET = $${TARGET}
+}
+
 unix {
-	DEFINES += DEBUG
+
 	LIBS	+= -L ../libi9/lib -lI9 -pthread -lmongoclient -lcurl -lyajl -lboost_system -lboost_thread -lmysqlclient
 
 	#Configs

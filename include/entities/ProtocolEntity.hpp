@@ -79,6 +79,14 @@ namespace BTCloud { namespace Entities {
 		uint32_t vehicleType;
 	};
 
+	/** \class InfoDriver
+	 *  \brief This entity has driver information.
+	 */
+	struct InfoDriver
+	{
+		string id;
+	};
+
 	/** \class Telemetry
 	 *  \brief This entity has a telemetry information.
 	 */
@@ -159,7 +167,7 @@ namespace BTCloud { namespace Entities {
 		//t32_ent_gpsi entrada_gps_info;
 		uint32_t positionIndex;
 		uint32_t gpsAltitude;
-		//t32_inf_mot inf_motorista;
+		InfoDriver inf_motorista;
 		//t32_horimetro info_horimetro;
 		uint32_t lastValTmp;
 		uint32_t ad1;
