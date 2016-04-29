@@ -112,6 +112,7 @@ void File::SaveBufferFile(std::string pathFile, const char *bufferFile, uint32_t
 		{
 			throw NotSpaceAvaiableException();
 		}
+
 		throw PathNotDefinedException();
 	}
 }

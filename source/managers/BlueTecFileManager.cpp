@@ -11,6 +11,7 @@
 #include <util/Log.hpp>
 #include "managers/BlueTecFileManager.h"
 #include "io/SwapFile.h"
+#include "mongo/client/dbclient.h" // for the driver
 
 #define TAG "[BlueTecFileManager] "
 
@@ -37,14 +38,14 @@ void BlueTecFileManager::SetPath(std::string path)
 	this->files.SetPath(path);
 }
 
-bool BlueTecFileManager::getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct HeaderDataFile &bluetecHeaderFile)
+bool BlueTecFileManager::getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct HeaderDataFile &bluetecHeaderFile, uint32_t timestamp)
 {
 	bool retorno = false;
 
 	std::stringstream nameFile;
 
 	// Search a point and file in a index of specified veioid
-	if(GetsBluetecHeaderFile(veioid, pointer, file, bluetecHeaderFile))
+	if(GetsBluetecHeaderFile(veioid, pointer, file, bluetecHeaderFile, timestamp))
 	{
 		nameFile << bluetecHeaderFile.headerFile.id;
 
@@ -108,7 +109,7 @@ void BlueTecFileManager::DelFile(uint32_t veioid, DataFile file)
 	this->DeleteIndexFileObject(vec);
 }
 
-bool BlueTecFileManager::GetsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct HeaderDataFile& bluetecHeaderFile)
+bool BlueTecFileManager::GetsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct HeaderDataFile& bluetecHeaderFile, uint32_t timestamp)
 {
 	bool retorno = false;
 
@@ -116,10 +117,13 @@ bool BlueTecFileManager::GetsBluetecHeaderFile(uint32_t veioid, uint32_t pointer
 
 	std::vector<struct HeaderDataFile*> *vec = this->GetListsBluetecHeaderFile(veioid);
 
+
 	for(it = vec->begin(); it != vec->end(); it++)
 	{
-		if( ((*it)->beginPointer == pointer || (*it)->endPointer == pointer) && (*it)->file == file)
+		Error("Pointers: (%d == %d|%d) header type: %d timestamp: %d", pointer, (*it)->beginPointer, (*it)->endPointer, (*it)->dataType, (*it)->timestamp);
+		if((((*it)->beginPointer == pointer || (*it)->endPointer == pointer) || timestamp == (*it)->timestamp) && (*it)->file == file)
 		{
+			Error("Found: (%d == %d|%d) header type: %d timestamp: %d == %d", pointer, (*it)->beginPointer, (*it)->endPointer, (*it)->dataType, timestamp, (*it)->timestamp);
 			retorno = true;
 			bluetecHeaderFile = *(*it);
 			break;
@@ -179,7 +183,7 @@ void BlueTecFileManager::SaveIndexFile(uint32_t veioid, std::vector<struct Heade
 	struct HeaderDataFile *ph;
 
 	// Clean files
-	this->Vacuum( veioid, listBluetecHeaderFile );
+	this->Vacuum(veioid, listBluetecHeaderFile);
 
 	int size = listBluetecHeaderFile->size() * sizeof(struct HeaderDataFile);
 	char *buffer = new char[size];

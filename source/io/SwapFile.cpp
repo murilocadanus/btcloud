@@ -37,6 +37,7 @@ bool SwapFile::GetBufferFile(std::string pathFile, char *bufferFile, uint32_t& s
 		retorno = File::GetBufferFile(pathFile, bufferFile, sizeBufferFile);
 	}
 
+
 	return retorno;
 }
 

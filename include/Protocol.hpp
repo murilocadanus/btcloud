@@ -70,7 +70,7 @@ class Protocol
 		 * \param arquivo int
 		 * \return void
 		 */
-		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo);
+		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo, uint32_t timestamp);
 
 	private:
 		/** \brief CreatePosition -.
@@ -151,7 +151,7 @@ class Protocol
 		 * \param arquivo unsigned int
 		 * \return void
 		 */
-		void ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo);
+		void ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo, uint32_t timestamp);
 
 		/** \brief ParseA3A5A7 -.
 		 *
@@ -159,7 +159,7 @@ class Protocol
 		 * \param arquivo unsigned int
 		 * \return void
 		 */
-		void ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo);
+		void ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo, uint32_t timestamp);
 
 		/** \brief ParseHSYNS -.
 		 *
@@ -173,9 +173,13 @@ class Protocol
 		/** \brief ParseHSYNC -.
 		 *
 		 * \param hsync string
+		 * \param arquivo unsigned int
+		 * \param ponteiroFim unsigned int
 		 * \return void
 		 */
-		void ParseHSYNC(string hsync);
+		void ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponteiroFim);
+
+		void DebugPass();
 
 	private:
 		mongo::DBClientConnection *pDBClientConnection;
@@ -192,6 +196,7 @@ class Protocol
 		EventFlag *pEventFlag;
 		Telemetry *pTelemetry;
 		OdoVel *pOdoVel;
+		int times;
 };
 
 }

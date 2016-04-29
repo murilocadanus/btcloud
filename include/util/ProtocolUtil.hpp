@@ -20,6 +20,7 @@
 #include <string>
 #include <sstream>
 #include "entities/ProtocolEntity.hpp"
+#include "mongo/client/dbclient.h" // for the driver
 
 using namespace std;
 
@@ -39,6 +40,7 @@ namespace BTCloud { namespace Util {
 			unsigned int saida6 :1;
 			unsigned int saida7 :1;
 	}__attribute__ ((packed)) Output;
+
 
 	/** \class Lapse
 	 *  \brief This entity contains lapse data.
