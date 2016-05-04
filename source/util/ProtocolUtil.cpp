@@ -263,20 +263,20 @@ double ParseLatLong(string operacao)
 
 	grau = preConv / 100000;
 
-	Dbg(TAG "Latlong graus %d", /*dec,*/ grau);
+	Dbg(TAG "Latlong graus %d", grau);
 
 	preConv -= grau * 100000;
 	minuto = preConv/1000;
 
-	Dbg(TAG "Latlong %d", /*dec,*/ preConv);
-	Dbg(TAG "Latlong minutos %d", /*dec,*/ minuto);
+	Dbg(TAG "Latlong %d", preConv);
+	Dbg(TAG "Latlong minutos %d", minuto);
 
 	preConv -= minuto * 1000;
 	segundo = ((double)preConv)/10.0;
 
-	Dbg(TAG "Latlong %d", /*dec,*/ preConv);
-	Dbg(TAG "Latlong segundos %d", /*dec,*/ segundo);
-	Dbg(TAG "Latlong retorno %d", /*dec,*/ grau+(minuto/60.0)+(segundo/3600.0));
+	Dbg(TAG "Latlong %d", preConv);
+	Dbg(TAG "Latlong segundos %d", segundo);
+	Dbg(TAG "Latlong retorno %d", grau+(minuto/60.0)+(segundo/3600.0));
 
 	return grau+(minuto/60.0)+(segundo/3600.0);
 }

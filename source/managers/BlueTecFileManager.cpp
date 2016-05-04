@@ -121,7 +121,7 @@ bool BlueTecFileManager::GetsBluetecHeaderFile(uint32_t veioid, uint32_t pointer
 	for(it = vec->begin(); it != vec->end(); it++)
 	{
 		Error("Pointers: (%d == %d|%d) header type: %d timestamp: %d", pointer, (*it)->beginPointer, (*it)->endPointer, (*it)->dataType, (*it)->timestamp);
-		if((((*it)->beginPointer == pointer || (*it)->endPointer == pointer) || timestamp == (*it)->timestamp) && (*it)->file == file)
+		if(/*(*/((*it)->beginPointer == pointer || (*it)->endPointer == pointer)/* || timestamp == (*it)->timestamp)*/ && (*it)->file == file)
 		{
 			Error("Found: (%d == %d|%d) header type: %d timestamp: %d == %d", pointer, (*it)->beginPointer, (*it)->endPointer, (*it)->dataType, timestamp, (*it)->timestamp);
 			retorno = true;
