@@ -168,7 +168,7 @@ class BlueTecFileManager
 		 * \param bluetecHeaderFile struct HeaderDataFile&
 		 * \return bool
 		 */
-		virtual bool getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct HeaderDataFile& bluetecHeaderFile, uint32_t timestamp);
+		virtual bool getBufferFile(uint32_t veioid, uint32_t pointer, uint16_t file, char *bufferFile, uint32_t& sizeBufferFile, struct HeaderDataFile& bluetecHeaderFile);
 
 		/** \brief SaveBufferFile - Save buffer file.
 		 *
@@ -240,7 +240,7 @@ class BlueTecFileManager
 		 * \param bluetecHeaderFile struct HeaderDataFile&
 		 * \return bool
 		 */
-		virtual bool GetsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct HeaderDataFile& bluetecHeaderFile, uint32_t timestamp);
+		virtual bool GetsBluetecHeaderFile(uint32_t veioid, uint32_t pointer, uint16_t file, struct HeaderDataFile& bluetecHeaderFile);
 
 		/** \brief GetListsBluetecHeaderFile - Get header file.
 		 *

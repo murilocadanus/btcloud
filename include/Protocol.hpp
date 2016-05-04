@@ -70,7 +70,7 @@ class Protocol
 		 * \param arquivo int
 		 * \return void
 		 */
-		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo, uint32_t timestamp);
+		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo);
 
 	private:
 		/** \brief CreatePosition -.
@@ -196,7 +196,6 @@ class Protocol
 		EventFlag *pEventFlag;
 		Telemetry *pTelemetry;
 		OdoVel *pOdoVel;
-		int times;
 };
 
 }

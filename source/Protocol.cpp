@@ -32,7 +32,6 @@ Protocol::Protocol()
 	pPosition = &pData->position;
 	pEventFlag = &pPosition->eventFlag;
 	pOdoVel = &pPosition->odoVel;
-	times = 0;
 }
 
 Protocol::~Protocol()
@@ -108,7 +107,7 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	Dbg(TAG "Fixing file cursor before and after HFULL");
 
 	// Verify case something matches at the end of this HFULL
-	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroFim + 1, arquivo, tBuffer, tSize, header, timestamp) &&
+	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
 			header.beginPointer == ponteiroFim + 1 &&
 			(header.dataType == Bluetec::enumDataType::DADOS ||
 			header.dataType == Bluetec::enumDataType::DADOS_FINAL ||
@@ -128,7 +127,7 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	}
 
 	// Verify case something matches at the start of this HFULL
-	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni - 1, arquivo, tBuffer, tSize, header, timestamp) &&
+	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
 			header.endPointer == ponteiroIni - 1 &&
 			(header.dataType == Bluetec::enumDataType::DADOS ||
 			header.dataType == Bluetec::enumDataType::HSYNS ||
@@ -177,7 +176,6 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	lapso.an4 = 0;
 
 	lapso.timestamp = mktime(BTCloud::Util::ParseTimeDate(hsync.substr(8, 7)));
-	Error("HSYNC timestamp: %d", lapso.timestamp);
 
 	// Load driver ibutton in bcd
 	lapso.ibtMotorista = "";
@@ -226,8 +224,47 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	Dbg(TAG "Save buffer file Header data type %d", header.dataType);
 	Dbg(TAG "Save buffer file Enum data type %d", Bluetec::enumDataType::HSYNC);
 
+	// Create a position for this HSYNC if it has a position
+	bool isGPS = (unsigned char) hsync.at(1) >= 0xA0;
+
+	if(isGPS)
+	{
+		double lat = BTCloud::Util::ParseLatitude(hsync.substr(2, 3), 0);
+		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), 0, 0);
+
+		Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
+
+		// Setting data to position package
+		pPosition->lat = lat;
+		pPosition->lon = lon;
+		pPosition->dateTime = lapso.timestamp;
+		pPosition->dateArrive = pTimer->GetCurrentTime();
+		pPosition->inf_motorista.id = lapso.ibtMotorista;
+
+		if(lapso.rpm > 0 && lapso.velocidade > 0)
+			pEventFlag->ignition = 1;
+		else
+			pEventFlag->ignition = 0;
+
+		pOdoVel->velocity = lapso.velocidade;
+
+
+		Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
+
+		// Send position package to queue in final protobuf format
+		//bluetecPacote.SerializeToString(&serializado);
+		BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
+
+		// Save JSON at MongoDB
+		CreatePosition();
+
+		// Reset entity
+		cPackage.Clear();
+	}
+
 	Dbg(TAG "IMC 2 - header.dataType = %d", header.dataType);
 	cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
+
 }
 
 void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo, uint32_t timestamp)
@@ -240,7 +277,7 @@ void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo, uint3
 	Dbg(TAG "Searching the start point in this route");
 
 	// Case something matches with the start of this route
-	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni - 1, arquivo, tBuffer, tSize, header, timestamp) &&
+	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
 			header.endPointer == ponteiroIni - 1 && header.file == arquivo)
 	{
 		Dbg(TAG "This route has a start point");
@@ -307,7 +344,6 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	lapso.an4 = 0;
 
 	lapso.timestamp = mktime(BTCloud::Util::ParseTimeDate(hsyns.substr(8, 7)));
-	Error("HSYNS timestamp: %d", lapso.timestamp);
 
 	// Load driver ibutton in bcd
 	lapso.ibtMotorista = "";
@@ -507,7 +543,7 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 	pDBClientConnection->update(pConfiguration->GetMongoDBCollections().at(1), query, querySet, false, true);
 }
 
-void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo, uint32_t timestamp)
+void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
 {
 	Bluetec::HeaderDataFile header;
 	char tBuffer[500000];
@@ -548,7 +584,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	lapso.an3 = 0;
 	lapso.an4 = 0;
 
-	Error(TAG "Processing data %d %d...", ponteiroIni, ponteiroFim);
+	Dbg(TAG "Processing data %d %d...", ponteiroIni, ponteiroFim);
 	Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)dados.at(0)), hex, setw(2), setfill('0'), int((unsigned char)dados.at(dados.length()-1)));
 
 	if(!cFileManager.GetHfull(dataCache.veioId, hfull))
@@ -559,9 +595,10 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		hfull.spanAcel = Bluetec::enumDefaultValues::SPANACEL;
 	}
 
+	// TODO: Validate warning
 	// Case some data exists
-	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni-1, arquivo, tBuffer, tSize, header, timestamp) &&
-			(header.endPointer == ponteiroIni-1 /*|| header.timestamp == timestamp*/) && header.file == arquivo)
+	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni-1, arquivo, tBuffer, tSize, header) &&
+			(header.endPointer == ponteiroIni-1) && header.file == arquivo)
 	{
 		Dbg(TAG "Found data before this file with type %d", header.dataType);
 		Dbg(TAG "IMC 3 - header.dataType = %d", header.dataType);
@@ -604,8 +641,9 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		}
 	}
 
-	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroFim + 1, arquivo, tBuffer, tSize, header, timestamp) &&
-			(header.beginPointer == ponteiroFim + 1 /*|| header.timestamp == timestamp*/) &&	header.file == arquivo)
+	// TODO: Validate warning
+	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
+			(header.beginPointer == ponteiroFim + 1) &&	header.file == arquivo)
 	{
 		// Data + Temp
 		ponteiroFim = header.endPointer;
@@ -790,9 +828,6 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 							// Verify if is a GPS
 							if(controleOper >= 0xA0)
 							{
-								//times++;
-								//Error(TAG "inside position %d times", times);
-
 								Dbg(TAG "GPS");
 
 								char buffer[255];
@@ -1314,6 +1349,10 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					if(inicio < i - lHsync)
 					{
 						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, i - lHsync - 1);
+
+						// Parse data
+						Dbg(TAG "ParseData HSYNS until HSYNC %d", ponteiroIni + inicio);
+						ParseData(sbt4.substr(inicio, i - inicio - lHsync), ponteiroIni + inicio, ponteiroIni + i-lHsync - 1, arquivo);
 						inicio = i - lHsync;
 					}
 					if(inicio == i -  lHsync)
@@ -1345,19 +1384,15 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					if(inicio < i - lHsyns)
 					{
 						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, lHsyns - 1);
-						/*Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - lHsyns - 1)));*/
 
 						// Parse data
-						Error(TAG "ParseData HSYNS %d", ponteiroIni + inicio);
-						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo, 0);
+						Dbg(TAG "ParseData HSYNS %d", ponteiroIni + inicio);
+						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo);
 						inicio = i - lHsyns;
 					}
 					if(inicio == i -  lHsyns)
 					{
 						Dbg(TAG "Creating file of type 3 from %d a %d", inicio, lHsyns - 1);
-						/*Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));*/
 
 						// i is in 'H', count plus 4 pointers ahead, 'H' + 'SYNS'
 						Dbg(TAG "Params HSYNS %d %d %d + %d + 4", inicio, arquivo, ponteiroIni, i);
@@ -1388,19 +1423,15 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					if(inicio < i - lHfull)
 					{
 						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, lHfull - 1);
-						Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
 
 						// Parse data
-						ParseData(sbt4.substr(inicio, i - inicio - lHfull), ponteiroIni + inicio, ponteiroIni + i-lHfull - 1, arquivo, 0);
+						ParseData(sbt4.substr(inicio, i - inicio - lHfull), ponteiroIni + inicio, ponteiroIni + i-lHfull - 1, arquivo);
 						inicio = i - lHfull;
 					}
 
 					if(inicio == i -  lHfull)
 					{
 						Dbg(TAG "Creating file of type 1 from %d a %d", inicio, i - 1);
-						/*Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-							hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));*/
 
 						// Parse data
 						// FIX: Change to parse a HFULL
@@ -1419,7 +1450,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					Dbg(TAG "Start %d i %d", inicio, i);
 				}
 			}
-			else if(i+4 < sbt4.length() && sbt4.at(i) == (unsigned char) 0x82 &&
+			/*else if(i+4 < sbt4.length() && (unsigned char)sbt4.at(i) == (unsigned char)0x82 &&
 					sbt4.compare(i,4,fimTrecho) == 0)
 			{
 				Dbg(TAG "Found the end of route in %d", i);
@@ -1427,11 +1458,8 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 				{
 					Dbg(TAG "Creating file of type 6 from %d a %d", inicio, i - 1);
 
-					Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio)),
-						hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(i - 1)));
-
 					// Parse data
-					ParseData(sbt4.substr(inicio, i - inicio), ponteiroIni + inicio, ponteiroIni + i-1, arquivo, 0);
+					ParseData(sbt4.substr(inicio, i - inicio), ponteiroIni + inicio, ponteiroIni + i-1, arquivo);
 					inicio = i;
 				}
 				if( inicio == i && i + lFimTrecho <= sbt4.length())
@@ -1445,17 +1473,15 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					inicio = i;
 				}
 				Dbg(TAG "Start %d i %d", inicio, i);
-			}
+			}*/
 		}
 
 		if(inicio < sbt4.length())
 		{
 			Dbg(TAG "Sending type 6 at the end of buffer %d a %d", inicio, sbt4.length() - 1);
-			Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(inicio))
-				, hex, setw(2), setfill('0'), int((unsigned char)sbt4.at(sbt4.length()-1)));
 
 			// Parse data
-			ParseData(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo, 0);
+			ParseData(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo);
 		}
 
 		fclose(in);
