@@ -261,10 +261,6 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 		// Reset entity
 		cPackage.Clear();
 	}
-
-	Dbg(TAG "IMC 2 - header.dataType = %d", header.dataType);
-	cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
-
 }
 
 void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo, uint32_t timestamp)
@@ -550,7 +546,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	uint32_t tSize=0;
 	Bluetec::HFull hfull;
 	struct BTCloud::Util::Lapse lapso;
-	int tipoDado = 0;
+	int tipoDado = Bluetec::enumDataType::DADOS;
 	int index = 0;
 	int fim = 0;
 	char bufferControle[255];
@@ -597,8 +593,10 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 	// TODO: Validate warning
 	// Case some data exists
-	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni-1, arquivo, tBuffer, tSize, header) &&
-			(header.endPointer == ponteiroIni-1) && header.file == arquivo)
+	if((cFileManager.getBufferFile(dataCache.veioId, ponteiroIni, arquivo, tBuffer, tSize, header) &&
+			(header.endPointer == ponteiroIni) && header.file == arquivo)
+		|| (cFileManager.getBufferFile(dataCache.veioId, ponteiroIni-1, arquivo, tBuffer, tSize, header) &&
+						(header.endPointer == ponteiroIni-1) && header.file == arquivo))
 	{
 		Dbg(TAG "Found data before this file with type %d", header.dataType);
 		Dbg(TAG "IMC 3 - header.dataType = %d", header.dataType);
@@ -949,6 +947,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			header.endPointer = ponteiroFim;
 			header.file = arquivo;
 			header.idTrecho = lapso.idTrecho;
+			header.timestamp = lapso.timestamp;
 			Dbg(TAG "-> ibtMotorista: %s", lapso.ibtMotorista.c_str());
 			string pLapso = BTCloud::Util::PersistableLapse(&lapso);
 
@@ -1450,7 +1449,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					Dbg(TAG "Start %d i %d", inicio, i);
 				}
 			}
-			/*else if(i+4 < sbt4.length() && (unsigned char)sbt4.at(i) == (unsigned char)0x82 &&
+			else if(i+4 < sbt4.length() && (unsigned char)sbt4.at(i) == (unsigned char)0x82 &&
 					sbt4.compare(i,4,fimTrecho) == 0)
 			{
 				Dbg(TAG "Found the end of route in %d", i);
@@ -1473,7 +1472,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					inicio = i;
 				}
 				Dbg(TAG "Start %d i %d", inicio, i);
-			}*/
+			}
 		}
 
 		if(inicio < sbt4.length())
