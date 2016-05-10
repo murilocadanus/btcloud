@@ -75,7 +75,6 @@ class BTCloudApp : public IApp, public IEventFileSystemListener
 		DBClientConnection cDBConnection;
 		BlueTecFileManager cFileManager;
 		Protocol cProtocol;
-
 };
 }
 

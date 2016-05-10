@@ -1,5 +1,4 @@
 #include "Protocol.hpp"
-#include "util/ProtocolUtil.hpp"
 #include <time.h>
 #include <vector>
 #include <string>
@@ -38,7 +37,7 @@ Protocol::~Protocol()
 {
 }
 
-void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo, uint32_t timestamp)
+void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo)
 {
 	Info(TAG "Init parse HFULL");
 
@@ -263,7 +262,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	}
 }
 
-void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo, uint32_t timestamp)
+void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
 {
 	// Search for route persisted with start cursor = 1 and remove it
 	Bluetec::HeaderDataFile header;
@@ -539,9 +538,10 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 	pDBClientConnection->update(pConfiguration->GetMongoDBCollections().at(1), query, querySet, false, true);
 }
 
-void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo)
+void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo, bool isFinalRoute)
 {
 	Bluetec::HeaderDataFile header;
+	Bluetec::HeaderDataFile hsynsHeader;
 	char tBuffer[500000];
 	uint32_t tSize=0;
 	Bluetec::HFull hfull;
@@ -549,17 +549,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	int tipoDado = Bluetec::enumDataType::DADOS;
 	int index = 0;
 	int fim = 0;
-	char bufferControle[255];
-	BTCloud::Util::Output *controle;
-	char bufferExpansao[255];
-	BTCloud::Util::Output *expansao;
-	string operacao;
-	int tamLapso = 0;
-	char bufferED[255];
-	BTCloud::Util::Output *ed;
-
-	int maxSizePacote = 1500;
-	int sizePacote = 0;
+	bool hasLapses = false;
 
 	lapso.idTrecho = 0;
 	lapso.timestamp = 0;
@@ -610,22 +600,18 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			case Bluetec::enumDataType::HSYNS_DADOS:
 
 			case Bluetec::enumDataType::HSYNS:
-				// This route was already started then the first lapse must be restored
-				BTCloud::Util::LapsoSetup(tBuffer, lapso);
-				tipoDado = Bluetec::enumDataType::HSYNS_DADOS;
-
-				// Clean the temporary lapse
-				cFileManager.DelFile(dataCache.veioId, header.headerFile);
-			break;
-
-			case Bluetec::enumDataType::HSYNC:
 
 				// This route was already started then the first lapse must be restored
 				BTCloud::Util::LapsoSetup(tBuffer, lapso);
-				tipoDado = Bluetec::enumDataType::HSYNS_DADOS;
+				tipoDado = isFinalRoute ? Bluetec::enumDataType::HSYNS_FINAL : Bluetec::enumDataType::HSYNS_DADOS;
 
 				// Clean the temporary lapse
 				cFileManager.DelFile(dataCache.veioId, header.headerFile);
+
+				// Cache header info
+				hsynsHeader = header;
+
+				hasLapses = true;
 			break;
 
 			case Bluetec::enumDataType::DADOS:
@@ -640,8 +626,10 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	}
 
 	// TODO: Validate warning
-	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
+	if((cFileManager.getBufferFile(dataCache.veioId, ponteiroFim + 1, arquivo, tBuffer, tSize, header) &&
 			(header.beginPointer == ponteiroFim + 1) &&	header.file == arquivo)
+		|| (cFileManager.getBufferFile(dataCache.veioId, ponteiroFim, arquivo, tBuffer, tSize, header) &&
+				(header.beginPointer == ponteiroFim) &&	header.file == arquivo))
 	{
 		// Data + Temp
 		ponteiroFim = header.endPointer;
@@ -649,13 +637,13 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		Dbg(TAG "Found data after this file with type %d", header.dataType);
 		Dbg(TAG "Found with end point %d", header.endPointer);
 
-		lapso.timestamp = header.timestamp;
+		//lapso.timestamp = header.timestamp;
 
 		switch(header.dataType)
 		{
 			case Bluetec::enumDataType::DADOS:
 				// This case of data shard found does not have a meaning, it will be updated
-				dados = dados + string(tBuffer);
+				dados += string(tBuffer, tSize);
 
 				// Clean file temporarily to overwrite it
 				cFileManager.DelFile(dataCache.veioId, header.headerFile);
@@ -666,7 +654,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 
 			case Bluetec::enumDataType::DADOS_FINAL:
 				if(header.dataType == Bluetec::enumDataType::DADOS_FINAL)
-					dados = dados + string(tBuffer);
+					dados += string(tBuffer, tSize);
 
 				// Clean file temporarily to overwrite it
 				cFileManager.DelFile(dataCache.veioId, header.headerFile);
@@ -680,8 +668,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		}
 	}
 
-	Dbg(TAG "Verifying route data type %d...", tipoDado);
-	if(tipoDado == Bluetec::enumDataType::DADOS_FINAL || tipoDado == Bluetec::enumDataType::DADOS)
+	if(tipoDado == Bluetec::enumDataType::DADOS && !hasLapses)
 	{
 		Dbg(TAG "Unknown route");
 
@@ -693,261 +680,21 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		Dbg(TAG "Save buffer file header data type %d", header.dataType);
 		cFileManager.SaveBufferFile(dataCache.veioId, dados.c_str(), dados.length(), header);
 	}
-	else if(tipoDado)
+	else
 	{
-		// When a route is known, so it exists and it can be processed
-		Dbg(TAG "Known route, processing...");
-		fim = dados.length();
-		const char *hexData = dados.c_str();
+		header.beginPointer = hsynsHeader.beginPointer;
+		header.dataType = hsynsHeader.dataType;
+		header.timestamp = hsynsHeader.timestamp;
 
-		Log(TAG "From 0x%02x[%d] .. 0x%02x[%d] to 0x%02x[%d] .. 0x%02x[%d]", dados.at(index), index, dados.at(index+1), index+1,
-			dados.at(dados.length() -2), dados.length() -2, dados.at(dados.length() -1), dados.length() -1);
+		ParseLapse(lapso, dados, hfull, index, fim);
 
-		//for(int i=0; i<dados.length(); ++i)
-		//{
-			//printf("%02X", (char) hexData[i]);
-			//std::cout << std::hex << std::setw(2) << std::setfill('0') << (char)hexData[i];
-		//}
-
-		while(index < fim)
-		{
-			Dbg(TAG "%d < %d", index, fim);
-			try
-			{
-				// Calc control byte size
-				bufferControle[0] = dados.at(index);
-				controle = (BTCloud::Util::Output*) bufferControle;
-				tamLapso = BTCloud::Util::LapseSize(controle);
-
-				// Case the expasion bit is enable, calc the expasion byte
-				if(controle->saida0 && index + 1 <= fim)
-				{
-					// The expasion byte comes after control byte, so increment it to calculate correctly next data
-					index++;
-
-					bufferExpansao[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
-					expansao = (BTCloud::Util::Output*) bufferExpansao;
-					tamLapso += (BTCloud::Util::ExpasionSize(expansao) + 1);
-				}
-
-				// Validate route lapse at this point
-				if(index + tamLapso <= fim)
-				{
-					// Speed
-					if(controle->saida5)
-					{
-						index++;
-						lapso.velocidade = ((double) ((unsigned char) dados.at(index)));
-					}
-					// Rpm
-					if(controle->saida4)
-					{
-						index++;
-						int rpm = 0;
-
-						try
-						{
-							rpm = (int) ((unsigned char) dados.at(index));
-						}
-						catch (const std::out_of_range& e){}
-
-						lapso.rpm = rpm * 50;
-					}
-					// Acel x
-					if(controle->saida3)
-					{
-						index++;
-						lapso.acelx = 0;
-					}
-					// Acel y
-					if(controle->saida2)
-					{
-						index++;
-						lapso.acely = 0;
-					}
-					// Ed
-					if(controle->saida1)
-					{
-						index++;
-						bufferED[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
-						ed = (BTCloud::Util::Output*) bufferED;
-
-						lapso.ed1 = (unsigned int) ed->saida0;
-						lapso.ed2 = (unsigned int) ed->saida1;
-						lapso.ed3 = (unsigned int) ed->saida2;
-						lapso.ed4 = (unsigned int) ed->saida3;
-						lapso.ed5 = (unsigned int) ed->saida4;
-						lapso.ed6 = (unsigned int) ed->saida5;
-						lapso.ed7 = (unsigned int) ed->saida6;
-						lapso.ed8 = (unsigned int) ed->saida7;
-					}
-
-					// Verify if exists a expasion byte, this time to process it
-					if(controle->saida0)
-					{
-						Dbg(TAG "Expansion");
-
-						// An 1
-						if(expansao->saida7)
-						{
-							Dbg(TAG "An 1");
-							lapso.an1 = 0;
-							index += 2;
-						}
-						// An 2
-						if(expansao->saida6)
-						{
-							Dbg(TAG "An 2");
-							lapso.an2 = 0;
-							index++;
-						}
-						// An 3
-						if(expansao->saida5)
-						{
-							Dbg(TAG "An 3");
-							lapso.an3 = 0;
-							index++;
-						}
-						// An 4
-						if(expansao->saida4)
-						{
-							Dbg(TAG "An 4");
-							lapso.an4 = 0;
-							index++;
-						}
-						// Verify if there is a operation information
-						if(expansao->saida3)
-						{
-							operacao = dados.substr(index + 1, 7);
-							lapso.operacao = operacao;
-							unsigned char controleOper = operacao.at(0);
-							index += 7;
-
-							// Verify if is a GPS
-							if(controleOper >= 0xA0)
-							{
-								Dbg(TAG "GPS");
-
-								char buffer[255];
-								buffer[0] = controleOper;
-								BTCloud::Util::Output *p;
-								p = (BTCloud::Util::Output*) buffer;
-								double lat = BTCloud::Util::ParseLatitude(operacao.substr(1, 3), p->saida2);
-								double lon = BTCloud::Util::ParseLongitude(operacao.substr(4, 3), p->saida1, p->saida0);
-
-								Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
-
-								// Setting data to position package
-								pPosition->lat = lat;
-								pPosition->lon = lon;
-								pPosition->dateTime = lapso.timestamp;
-								pPosition->dateArrive = pTimer->GetCurrentTime();
-								pPosition->inf_motorista.id = lapso.ibtMotorista;
-
-								if(lapso.rpm > 0 && lapso.velocidade > 0)
-									pEventFlag->ignition = 1;
-								else
-									pEventFlag->ignition = 0;
-
-								pOdoVel->velocity = lapso.velocidade;
-
-								Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
-								Dbg(TAG "Position found, sending package with %d lapses of %d bytes",
-									sizePacote / iLapsoSize, iLapsoSize);
-
-								// Send position package to queue in final protobuf format
-								//bluetecPacote.SerializeToString(&serializado);
-								BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
-
-								// Save JSON at MongoDB
-								CreatePosition();
-
-								// Reset entity
-								cPackage.Clear();
-
-								// Reset maximum size of packet
-								sizePacote = 0;
-							}
-						}
-
-						// Increase odometer
-						if(expansao->saida2)
-						{
-							//cout << "ODOMETRO INCREMENTADO " << dec << lapso.odometro << " + 100 = ";
-							lapso.odometro += 100;
-							//cout <<dec<< lapso.odometro<< endl;
-						}
-
-						// Increase horimeter
-						if(expansao->saida1)
-						{
-							lapso.horimetro += 6;
-						}
-
-						// Empty
-						if(expansao->saida0)
-						{
-						}
-					}
-
-					// Set protobuf vars with lapse values
-					index++;
-
-					// Validates package size
-					sizePacote += iLapsoSize;
-
-					if(sizePacote > maxSizePacote)
-					{
-						Dbg(TAG "Maximum size reached, sending package with %d lapses with %d bytes", sizePacote / iLapsoSize, iLapsoSize);
-
-						// Send case overlaps the size
-						//bluetecPacote.SerializeToString(&serializado);
-
-						// Save data at MongoDB
-						/*pPosition->dateTime = lapso.timestamp;
-						pPosition->dateArrive = pTimer->GetCurrentTime();
-						BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
-						CreatePosition();
-
-						// Reset entity
-						cPackage.Clear();*/
-
-						// Reset the value of package with the size of lapse
-						sizePacote = iLapsoSize;
-					}
-					else
-					{
-						BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
-					}
-					lapso.timestamp += hfull.lapso;
-				}
-				else
-				{
-					index = fim;
-				}
-			}
-			catch(exception& e)
-			{
-				Error(TAG "Index error %d %s", index, e.what());
-			}
-		}
-
-		//bluetecPacote.SerializeToString(&serializado);
-		/*pPosition->dateTime = lapso.timestamp;
-		pPosition->dateArrive = pTimer->GetCurrentTime();
-		BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
-		CreatePosition();
-		cPackage.Clear();*/
-
-		// Case do not exist a end of route, the last lapse must be returned
-		// to persist and to not reprocess
 		if(tipoDado != Bluetec::enumDataType::HSYNS_FINAL)
 		{
-			header.beginPointer = ponteiroIni;
-			header.endPointer = ponteiroFim;
-			header.file = arquivo;
+			// Case do not exist a end of route, the last lapse must be returned
+			// to persist and to not reprocess
 			header.idTrecho = lapso.idTrecho;
 			header.timestamp = lapso.timestamp;
+			header.endPointer = ponteiroFim;
 			Dbg(TAG "-> ibtMotorista: %s", lapso.ibtMotorista.c_str());
 			string pLapso = BTCloud::Util::PersistableLapse(&lapso);
 
@@ -955,6 +702,255 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
 		}
 	}
+}
+
+void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HFull hfull, int index, int fim)
+{
+	BTCloud::Util::Output *controle;
+	char bufferControle[255];
+	char bufferExpansao[255];
+	BTCloud::Util::Output *expansao;
+	string operacao;
+	int tamLapso = 0;
+	char bufferED[255];
+	BTCloud::Util::Output *ed;
+
+	int maxSizePacote = 1500;
+	int sizePacote = 0;
+
+	// When a route is known, so it exists and it can be processed
+	Dbg(TAG "Known route, processing...");
+	fim = dados.length();
+
+	while(index < fim)
+	{
+		Dbg(TAG "%d < %d", index, fim);
+		try
+		{
+			// Calc control byte size
+			bufferControle[0] = dados.at(index);
+			controle = (BTCloud::Util::Output*) bufferControle;
+			tamLapso = BTCloud::Util::LapseSize(controle);
+
+			// Case the expasion bit is enable, calc the expasion byte
+			if(controle->saida0 && index + 1 <= fim)
+			{
+				// The expasion byte comes after control byte, so increment it to calculate correctly next data
+				index++;
+
+				bufferExpansao[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
+				expansao = (BTCloud::Util::Output*) bufferExpansao;
+				tamLapso += (BTCloud::Util::ExpasionSize(expansao) + 1);
+			}
+
+			// Validate route lapse at this point
+			if(index + tamLapso <= fim)
+			{
+				// Speed
+				if(controle->saida5)
+				{
+					index++;
+					lapso.velocidade = ((double) ((unsigned char) dados.at(index)));
+				}
+				// Rpm
+				if(controle->saida4)
+				{
+					index++;
+					int rpm = 0;
+
+					try
+					{
+						rpm = (int) ((unsigned char) dados.at(index));
+					}
+					catch (const std::out_of_range& e){}
+
+					lapso.rpm = rpm * 50;
+				}
+				// Acel x
+				if(controle->saida3)
+				{
+					index++;
+					lapso.acelx = 0;
+				}
+				// Acel y
+				if(controle->saida2)
+				{
+					index++;
+					lapso.acely = 0;
+				}
+				// Ed
+				if(controle->saida1)
+				{
+					index++;
+					bufferED[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
+					ed = (BTCloud::Util::Output*) bufferED;
+
+					lapso.ed1 = (unsigned int) ed->saida0;
+					lapso.ed2 = (unsigned int) ed->saida1;
+					lapso.ed3 = (unsigned int) ed->saida2;
+					lapso.ed4 = (unsigned int) ed->saida3;
+					lapso.ed5 = (unsigned int) ed->saida4;
+					lapso.ed6 = (unsigned int) ed->saida5;
+					lapso.ed7 = (unsigned int) ed->saida6;
+					lapso.ed8 = (unsigned int) ed->saida7;
+				}
+
+				// Verify if exists a expasion byte, this time to process it
+				if(controle->saida0)
+				{
+					Dbg(TAG "Expansion");
+
+					// An 1
+					if(expansao->saida7)
+					{
+						Dbg(TAG "An 1");
+						lapso.an1 = 0;
+						index += 2;
+					}
+					// An 2
+					if(expansao->saida6)
+					{
+						Dbg(TAG "An 2");
+						lapso.an2 = 0;
+						index++;
+					}
+					// An 3
+					if(expansao->saida5)
+					{
+						Dbg(TAG "An 3");
+						lapso.an3 = 0;
+						index++;
+					}
+					// An 4
+					if(expansao->saida4)
+					{
+						Dbg(TAG "An 4");
+						lapso.an4 = 0;
+						index++;
+					}
+					// Verify if there is a operation information
+					if(expansao->saida3)
+					{
+						operacao = dados.substr(index + 1, 7);
+						lapso.operacao = operacao;
+						unsigned char controleOper = operacao.at(0);
+						index += 7;
+
+						// Verify if is a GPS
+						if(controleOper >= 0xA0)
+						{
+							Dbg(TAG "GPS");
+
+							char buffer[255];
+							buffer[0] = controleOper;
+							BTCloud::Util::Output *p;
+							p = (BTCloud::Util::Output*) buffer;
+							double lat = BTCloud::Util::ParseLatitude(operacao.substr(1, 3), p->saida2);
+							double lon = BTCloud::Util::ParseLongitude(operacao.substr(4, 3), p->saida1, p->saida0);
+
+							Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
+
+							// Setting data to position package
+							pPosition->lat = lat;
+							pPosition->lon = lon;
+							pPosition->dateTime = lapso.timestamp;
+							pPosition->dateArrive = pTimer->GetCurrentTime();
+							pPosition->inf_motorista.id = lapso.ibtMotorista;
+
+							if(lapso.rpm > 0 && lapso.velocidade > 0)
+								pEventFlag->ignition = 1;
+							else
+								pEventFlag->ignition = 0;
+
+							pOdoVel->velocity = lapso.velocidade;
+
+							Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
+							Dbg(TAG "Position found, sending package with %d lapses of %d bytes",
+								sizePacote / iLapsoSize, iLapsoSize);
+
+							// Send position package to queue in final protobuf format
+							//bluetecPacote.SerializeToString(&serializado);
+							BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
+
+							// Save JSON at MongoDB
+							CreatePosition();
+
+							// Reset entity
+							cPackage.Clear();
+
+							// Reset maximum size of packet
+							sizePacote = 0;
+						}
+					}
+
+					// Increase odometer
+					if(expansao->saida2)
+					{
+						//cout << "ODOMETRO INCREMENTADO " << dec << lapso.odometro << " + 100 = ";
+						lapso.odometro += 100;
+						//cout <<dec<< lapso.odometro<< endl;
+					}
+
+					// Increase horimeter
+					if(expansao->saida1)
+					{
+						lapso.horimetro += 6;
+					}
+
+					// Empty
+					if(expansao->saida0)
+					{
+					}
+				}
+
+				// Set protobuf vars with lapse values
+				index++;
+
+				// Validates package size
+				sizePacote += iLapsoSize;
+
+				if(sizePacote > maxSizePacote)
+				{
+					Dbg(TAG "Maximum size reached, sending package with %d lapses with %d bytes", sizePacote / iLapsoSize, iLapsoSize);
+
+					// Send case overlaps the size
+					//bluetecPacote.SerializeToString(&serializado);
+
+					// Save data at MongoDB
+					/*pPosition->dateTime = lapso.timestamp;
+					pPosition->dateArrive = pTimer->GetCurrentTime();
+					BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
+					CreatePosition();
+
+					// Reset entity
+					cPackage.Clear();*/
+
+					// Reset the value of package with the size of lapse
+					sizePacote = iLapsoSize;
+				}
+				else
+				{
+					BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
+				}
+				lapso.timestamp += hfull.lapso;
+			}
+			else
+			{
+				index = fim;
+			}
+		}
+		catch(exception& e)
+		{
+			Error(TAG "Index error %d %s", index, e.what());
+		}
+	}
+
+	//bluetecPacote.SerializeToString(&serializado);
+	/*pPosition->dateTime = lapso.timestamp;
+	pPosition->dateArrive = pTimer->GetCurrentTime();
+	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
+	CreatePosition();
+	cPackage.Clear();*/
 }
 
 void Protocol::GetClientData(DataCache &retorno, std::string chave)
@@ -1351,7 +1347,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 
 						// Parse data
 						Dbg(TAG "ParseData HSYNS until HSYNC %d", ponteiroIni + inicio);
-						ParseData(sbt4.substr(inicio, i - inicio - lHsync), ponteiroIni + inicio, ponteiroIni + i-lHsync - 1, arquivo);
+						ParseData(sbt4.substr(inicio, i - inicio - lHsync), ponteiroIni + inicio, ponteiroIni + i-lHsync - 1, arquivo, false);
 						inicio = i - lHsync;
 					}
 					if(inicio == i -  lHsync)
@@ -1386,7 +1382,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 
 						// Parse data
 						Dbg(TAG "ParseData HSYNS %d", ponteiroIni + inicio);
-						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo);
+						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo, false);
 						inicio = i - lHsyns;
 					}
 					if(inicio == i -  lHsyns)
@@ -1424,7 +1420,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, lHfull - 1);
 
 						// Parse data
-						ParseData(sbt4.substr(inicio, i - inicio - lHfull), ponteiroIni + inicio, ponteiroIni + i-lHfull - 1, arquivo);
+						ParseData(sbt4.substr(inicio, i - inicio - lHfull), ponteiroIni + inicio, ponteiroIni + i-lHfull - 1, arquivo, false);
 						inicio = i - lHfull;
 					}
 
@@ -1436,7 +1432,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						// FIX: Change to parse a HFULL
 						try
 						{
-							ParseHFULL(sbt4.substr(inicio, i-inicio), ponteiroIni+inicio, i+4, arquivo, 0);
+							ParseHFULL(sbt4.substr(inicio, i-inicio), ponteiroIni+inicio, i+4, arquivo);
 						}
 						catch (const std::out_of_range& e)
 						{
@@ -1458,7 +1454,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					Dbg(TAG "Creating file of type 6 from %d a %d", inicio, i - 1);
 
 					// Parse data
-					ParseData(sbt4.substr(inicio, i - inicio), ponteiroIni + inicio, ponteiroIni + i-1, arquivo);
+					ParseData(sbt4.substr(inicio, i - inicio), ponteiroIni + inicio, ponteiroIni + i-1, arquivo, true);
 					inicio = i;
 				}
 				if( inicio == i && i + lFimTrecho <= sbt4.length())
@@ -1466,7 +1462,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					Dbg(TAG "Closing the route of final point %d", i - 1);
 
 					// Parse data
-					ParseA3A5A7(ponteiroIni + i, arquivo, 0);
+					//ParseA3A5A7(ponteiroIni + i, arquivo, 0);
 
 					i += lFimTrecho + 1;
 					inicio = i;
@@ -1480,7 +1476,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 			Dbg(TAG "Sending type 6 at the end of buffer %d a %d", inicio, sbt4.length() - 1);
 
 			// Parse data
-			ParseData(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo);
+			ParseData(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo, false);
 		}
 
 		fclose(in);

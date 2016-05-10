@@ -25,6 +25,7 @@
 #include "mongo/client/dbclient.h" // for the driver
 #include "entities/ProtocolEntity.hpp"
 #include "managers/BlueTecFileManager.h"
+#include "util/ProtocolUtil.hpp"
 
 using namespace std;
 
@@ -70,7 +71,19 @@ class Protocol
 		 * \param arquivo int
 		 * \return void
 		 */
-		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo);
+		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo, bool isFinalRoute);
+
+		/** \brief ParseLapse -.
+		 *
+		 * \param lapso BTCloud::Util::Lapse
+		 * \param dados string
+		 * \param hfull Bluetec::HFull
+		 * \param index int
+		 * \param fim int
+
+		 * \return void
+		 */
+		void ParseLapse(Util::Lapse &lapso, string dados, Bluetec::HFull hfull, int index, int fim);
 
 	private:
 		/** \brief CreatePosition -.
@@ -151,7 +164,7 @@ class Protocol
 		 * \param arquivo unsigned int
 		 * \return void
 		 */
-		void ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo, uint32_t timestamp);
+		void ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo);
 
 		/** \brief ParseA3A5A7 -.
 		 *
@@ -159,7 +172,7 @@ class Protocol
 		 * \param arquivo unsigned int
 		 * \return void
 		 */
-		void ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo, uint32_t timestamp);
+		void ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo);
 
 		/** \brief ParseHSYNS -.
 		 *
