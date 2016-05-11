@@ -228,8 +228,8 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 
 	if(isGPS)
 	{
-		double lat = BTCloud::Util::ParseLatitude(hsync.substr(2, 3), 0);
-		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), 0, 0);
+		double lat = BTCloud::Util::ParseLatitude(hsync.substr(2, 3), 1);
+		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), 1, 0);
 
 		Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
