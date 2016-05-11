@@ -1353,8 +1353,6 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					if(inicio == i -  lHsync)
 					{
 						Dbg(TAG "Creating file of type 2 from %d a %d", inicio, i - 1);
-						Dbg(TAG "From 0x%02x[%d] .. 0x%02x[%d] to 0x%02x[%d] .. 0x%02x[%d]", sbt4.at(inicio), inicio, sbt4.at(inicio+1), inicio+1,
-							sbt4.at(lHsync -2), lHsync -2, sbt4.at(lHsync -1), lHsync -1);
 
 						// Parse data
 						//parseHSYNC( sbt4.substr( i - 21, 26 ) );
