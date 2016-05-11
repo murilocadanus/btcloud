@@ -61,7 +61,7 @@ void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
 {
 	string filePath = ev->GetDirName() + ev->GetFileName();
 	Dbg(TAG "OnFileSystemNotifyChange %s", filePath.c_str());
-	Error(TAG "File to process: %s", ev->GetFileName().c_str());
+	//Error(TAG "File to process: %s", ev->GetFileName().c_str());
 
 	// Process
 	cProtocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
