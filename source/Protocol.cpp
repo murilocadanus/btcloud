@@ -258,7 +258,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 		BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 		// Save JSON at MongoDB
-		CreatePosition();
+		CreatePosition(false, false);
 
 		// Reset entity
 		cPackage.Clear();
@@ -394,7 +394,7 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
 }
 
-void Protocol::CreatePosition()
+void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased)
 {
 	// Get all values from bluetec package
 	int idEquipment = dataCache.id;
@@ -453,6 +453,7 @@ void Protocol::CreatePosition()
 					"entrada4" << false << "entrada5" << false << "entrada6" << false << "entrada7" << false) <<
 				"saidas" << BSON("saida0" << false << "saida1" << false << "saida2" << false << "saida3" << false <<
 								 "saida4" << false << "saida5" << false << "saida6" << false << "saida7" << false) <<
+				"odometro_adicionado" << isOdometerIncreased << "horimetro_adicionado" << isHourmeterIncreased <<
 				"DadoLivre" << BSON(
 					"Analogico1" << analogic1 << "Analogico2" << analogic2 << "Analogico3" << analogic3 <<
 					"Analogico4" << analogic4 << "Horimetro" << horimeter << "AcelerometroX" << accelerometerX <<
@@ -724,6 +725,8 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 	// When a route is known, so it exists and it can be processed
 	Dbg(TAG "Known route, processing...");
 	fim = dados.length();
+	bool isHourmeterIncreased = false;
+	bool isOdometerIncreased = false;
 
 	while(index < fim)
 	{
@@ -876,7 +879,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 							BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 							// Save JSON at MongoDB
-							CreatePosition();
+							CreatePosition(isOdometerIncreased, isHourmeterIncreased);
 
 							// Reset entity
 							cPackage.Clear();
@@ -891,14 +894,18 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 					{
 						//cout << "ODOMETRO INCREMENTADO " << dec << lapso.odometro << " + 100 = ";
 						lapso.odometro += 100;
+						isOdometerIncreased = true;
 						//cout <<dec<< lapso.odometro<< endl;
 					}
+					else isOdometerIncreased = false;
 
 					// Increase horimeter
 					if(expansao->saida1)
 					{
 						lapso.horimetro += 6;
+						isHourmeterIncreased = true;
 					}
+					else isHourmeterIncreased = false;
 
 					// Empty
 					if(expansao->saida0)

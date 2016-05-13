@@ -90,7 +90,7 @@ class Protocol
 		 *
 		 * \return void
 		 */
-		void CreatePosition();
+		void CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased);
 
 		/** \brief GetLastPosition -.
 		 *
