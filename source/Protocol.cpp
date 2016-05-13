@@ -1376,7 +1376,8 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						}
 						catch (const std::out_of_range& e)
 						{
-							Error(TAG "Error %s. HSYNC sbt4.substr(%d, %d)", e.what(), inicio, lHsync);
+
+							Error(TAG "%s/%s/%s Error %s. HSYNC sbt4.substr(%d, %d)", clientName.c_str(), plate.c_str(), fileName.c_str(), e.what(), inicio, lHsync);
 						}
 
 						i += 5;
@@ -1415,7 +1416,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						}
 						catch (const std::out_of_range& e)
 						{
-							Error(TAG "Error %s. HSYNS sbt4.substr(%d, %d)", e.what(), inicio, lHsyns);
+							Error(TAG "%s/%s/%s Error %s. HSYNS sbt4.substr(%d, %d)", clientName.c_str(), plate.c_str(), fileName.c_str(), e.what(), inicio, lHsyns);
 						}
 
 						i += 5;
