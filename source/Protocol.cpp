@@ -1150,7 +1150,7 @@ uint32_t Protocol::GetVehicle(uint32_t equipId)
 
 uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::string plate)
 {
-	//int vehicleId = GetVehicle(equipId);
+	int vehicleId = GetVehicle(equipId);
 	int id = 0;
 
 	// Connect to mysql
@@ -1161,11 +1161,18 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 
 	string query("");
 
+	// FIX: Deleting and then inserting due update problem where it not affect row
+	query.append("DELETE FROM veiculos WHERE veioid = ").append(std::to_string(vehicleId));
+	Dbg(TAG "Delete Query: %s", query.c_str());
+	pMysqlConnector->Execute(query);
+
 	/*query.append("UPDATE veiculos SET ")
 			.append("vei_clioid = ").append(std::to_string(clientId))
 			.append(", vei_placa = '").append(plate).append("'")
 			.append(", vei_alias = '").append(plate).append("'")
 			.append(" WHERE veioid = ").append(std::to_string(vehicleId));*/
+
+	query.clear();
 
 	query.append("INSERT INTO veiculos SET veioid = default")
 			.append(", vei_clioid = ").append(std::to_string(clientId))
@@ -1215,7 +1222,7 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 			int imei = rand();
 
 			// FIX: Verify why 0 is returned from pConfiguration
-			uint32_t equipId = CreateEquipment(/*pConfiguration->GetProjectId()*/18, imei);
+			uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), imei);
 			uint32_t vehiId = CreateVehicle(clientId, equipId, plate);
 
 			retorno.veioId = vehiId;
