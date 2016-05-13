@@ -866,7 +866,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 							pPosition->dateArrive = pTimer->GetCurrentTime();
 							pPosition->inf_motorista.id = lapso.ibtMotorista;
 
-							if(lapso.rpm > 0 && lapso.velocidade > 0)
+							if(lapso.rpm > 0)
 								pEventFlag->ignition = 1;
 							else
 								pEventFlag->ignition = 0;
