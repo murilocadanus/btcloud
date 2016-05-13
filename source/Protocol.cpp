@@ -1218,7 +1218,7 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 			int imei = rand();
 
 			// FIX: Verify why 0 is returned from pConfiguration
-			uint32_t equipId = CreateEquipment(/*pConfiguration->GetProjectId()*/18, imei);
+			uint32_t equipId = CreateEquipment(/*pConfiguration->GetProjectId()*/1, imei);
 			uint32_t vehiId = CreateVehicle(clientId, equipId, plate);
 
 			retorno.veioId = vehiId;
