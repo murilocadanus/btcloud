@@ -228,11 +228,14 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 
 	if(isGPS)
 	{
-		const char *controlByte = hsync.substr(1, 1).c_str();
+		/*const char *controlByte = hsync.substr(1, 1).c_str();
 		BTCloud::Util::Output *p = (BTCloud::Util::Output*) controlByte;
 
 		double lat = BTCloud::Util::ParseLatitude(hsync.substr(2, 3), p->saida2);
-		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), p->saida1, p->saida0);
+		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), p->saida1, p->saida0);*/
+
+		double lat = BTCloud::Util::ParseLatitude(hsync.substr(2, 3), 1);
+		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), 1, 0);
 
 		Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
@@ -893,7 +896,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 					if(expansao->saida2)
 					{
 						//cout << "ODOMETRO INCREMENTADO " << dec << lapso.odometro << " + 100 = ";
-						lapso.odometro += 100;
+						lapso.odometro += 0.1;
 						isOdometerIncreased = true;
 						//cout <<dec<< lapso.odometro<< endl;
 					}
@@ -902,7 +905,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 					// Increase horimeter
 					if(expansao->saida1)
 					{
-						lapso.horimetro += 6;
+						lapso.horimetro += 0.1;
 						isHourmeterIncreased = true;
 					}
 					else isHourmeterIncreased = false;
@@ -1223,6 +1226,7 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 
 			// FIX: Verify why 0 is returned from pConfiguration
 			uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), imei);
+
 			uint32_t vehiId = CreateVehicle(clientId, equipId, plate);
 
 			retorno.veioId = vehiId;
