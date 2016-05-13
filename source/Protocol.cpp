@@ -501,7 +501,7 @@ uint64_t Protocol::GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate
 
 	mongo::Query query = QUERY("veiculo" << vehicleId);
 
-	Info(TAG "Has last position %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), query.toString().c_str());
+	Dbg(TAG "Has last position %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), query.toString().c_str());
 
 	auto_ptr<mongo::DBClientCursor> cursor = pDBClientConnection->query(pConfiguration->GetMongoDBCollections().at(1), query);
 
@@ -536,7 +536,7 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 										)
 							);
 
-	Info(TAG "Update querySet %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), querySet.toString().c_str());
+	Dbg(TAG "Update querySet %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), querySet.toString().c_str());
 
 	// Updating based on vehicle id with multiple parameter
 	pDBClientConnection->update(pConfiguration->GetMongoDBCollections().at(1), query, querySet, false, true);
@@ -1259,7 +1259,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 	// Verify the name of file to contains BT4
 	if(fileName.length() < 3 || (fileName.substr(0, 3) != "BT4"))
 	{
-		Info(TAG "Ignoring %s, it is not in BT4 format", fileName.c_str());
+		Dbg(TAG "Ignoring %s, it is not in BT4 format", fileName.c_str());
 		return;
 	}
 
