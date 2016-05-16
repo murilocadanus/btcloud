@@ -21,6 +21,7 @@
 #include <iostream>
 #include <api/mysql/MySQLConnector.hpp>
 #include <interface/IEventFileSystemListener.hpp>
+#include "queue"
 #include <mongo/client/dbclient.h>
 #include "managers/BlueTecFileManager.h"
 #include "Defines.hpp"
@@ -55,6 +56,14 @@ class BTCloudApp : public IApp, public IEventFileSystemListener
 		 */
 		virtual bool Initialize() override;
 
+		/** \brief Update - Code to be executed in a loop.
+		 *
+		 * \param dt float
+		 * \return bool
+		 *
+		 */
+		virtual bool Update(float dt) override;
+
 		/** \brief Shutdown - Code to finish all objects used.
 		 *
 		 * \return void
@@ -72,6 +81,7 @@ class BTCloudApp : public IApp, public IEventFileSystemListener
 		void OnFileSystemNotifyChange(const EventFileSystem *ev);
 
 	private:
+		std::queue<string> qQueueBT4FileNames;
 		DBClientConnection cDBConnection;
 		BlueTecFileManager cFileManager;
 		Protocol cProtocol;

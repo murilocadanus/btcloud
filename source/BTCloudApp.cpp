@@ -19,6 +19,7 @@ namespace BTCloud {
 
 BTCloudApp::BTCloudApp()
 	: cDBConnection()
+	, qQueueBT4FileNames()
 {
 }
 
@@ -57,14 +58,32 @@ bool BTCloudApp::Initialize()
 	return true;
 }
 
+bool BTCloudApp::Update(float dt)
+{
+	Dbg(TAG "%d", dt);
+
+	if(!qQueueBT4FileNames.empty())
+	{
+		// Get file at top position
+		string filePath = qQueueBT4FileNames.front();
+		int fileLength = filePath.length();
+		Dbg(TAG "%s %d", filePath.c_str(), fileLength);
+
+		// Process
+		cProtocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
+		qQueueBT4FileNames.pop();
+		return true;
+	}
+	else return false;
+}
+
 void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
 {
 	string filePath = ev->GetDirName() + ev->GetFileName();
 	Dbg(TAG "OnFileSystemNotifyChange %s", filePath.c_str());
-	//Error(TAG "File to process: %s", ev->GetFileName().c_str());
 
-	// Process
-	cProtocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
+	// Push file to queue
+	qQueueBT4FileNames.push(filePath);
 }
 
 bool BTCloudApp::Shutdown()
