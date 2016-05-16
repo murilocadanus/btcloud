@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <stdio.h>
 #include <algorithm>
+#include <thread>
 #include "FileSystem.hpp"
 
 
@@ -60,14 +61,12 @@ bool BTCloudApp::Initialize()
 
 bool BTCloudApp::Update(float dt)
 {
-	Dbg(TAG "%d", dt);
-
 	if(!qQueueBT4FileNames.empty())
 	{
 		// Get file at top position
 		string filePath = qQueueBT4FileNames.front();
 		int fileLength = filePath.length();
-		Dbg(TAG "%s %d", filePath.c_str(), fileLength);
+		Dbg(TAG "%s %d -> %d", filePath.c_str(), fileLength, dt);
 
 		// Process
 		cProtocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
@@ -82,8 +81,9 @@ void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
 	string filePath = ev->GetDirName() + ev->GetFileName();
 	Dbg(TAG "OnFileSystemNotifyChange %s", filePath.c_str());
 
-	// Push file to queue
-	qQueueBT4FileNames.push(filePath);
+	// Push file to queue case it is a new BT4
+	if(ev->GetFileName().substr(0, 3) == "BT4")
+		qQueueBT4FileNames.push(filePath);
 }
 
 bool BTCloudApp::Shutdown()
