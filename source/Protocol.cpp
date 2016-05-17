@@ -191,7 +191,8 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	{
 		// Convert all driver info id to Hex
 		std::vector<unsigned char> driverElements {
-			hsync.at(2), hsync.at(3), hsync.at(4), hsync.at(5), hsync.at(6), hsync.at(7)
+			(unsigned char)hsync.at(2), (unsigned char)hsync.at(3), (unsigned char)hsync.at(4),
+			(unsigned char)hsync.at(5), (unsigned char)hsync.at(6), (unsigned char)hsync.at(7)
 		};
 		for(int elem : driverElements) driverStream << std::setw(2) << elem;
 		lapso.ibtMotorista += driverStream.str().c_str();
@@ -361,7 +362,8 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	{
 		// Convert all driver info id to Hex
 		std::vector<unsigned char> driverElements {
-			hsyns.at(2), hsyns.at(3), hsyns.at(4), hsyns.at(5), hsyns.at(6), hsyns.at(7)
+			(unsigned char)hsyns.at(2), (unsigned char)hsyns.at(3), (unsigned char)hsyns.at(4),
+			(unsigned char)hsyns.at(5), (unsigned char)hsyns.at(6), (unsigned char)hsyns.at(7)
 		};
 		for(int elem : driverElements) driverStream << std::setw(2) << elem;
 		lapso.ibtMotorista += driverStream.str().c_str();
@@ -1302,7 +1304,6 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 
 		std::string sbt4(bt4, bt4 + lSize);
 
-		size_t pos = 0;
 		int arquivo = (int) sbt4[1];
 
 		Dbg(TAG "File: %d", arquivo);
