@@ -1267,8 +1267,6 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 
 	Info(TAG "Processing file: %s", fileName.c_str());
 
-	Dbg(TAG "%d", pConfiguration->GetProjectId());
-
 	// Verify the name of file to contains BT4
 	if(fileName.length() < 3 || (fileName.substr(0, 3) != "BT4"))
 	{
