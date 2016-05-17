@@ -881,7 +881,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 
 							// Send position package to queue in final protobuf format
 							//bluetecPacote.SerializeToString(&serializado);
-							BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
+							//BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 							// Save JSON at MongoDB
 							CreatePosition(isOdometerIncreased, isHourmeterIncreased);
@@ -897,10 +897,8 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 					// Increase odometer
 					if(expansao->saida2)
 					{
-						//cout << "ODOMETRO INCREMENTADO " << dec << lapso.odometro << " + 100 = ";
-						lapso.odometro += 0.1;
+						lapso.odometro += 1;
 						isOdometerIncreased = true;
-						//cout <<dec<< lapso.odometro<< endl;
 					}
 					else isOdometerIncreased = false;
 
@@ -1268,6 +1266,8 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 	std::transform(fileName.begin(), fileName.end(), fileName.begin(), ::toupper);
 
 	Info(TAG "Processing file: %s", fileName.c_str());
+
+	Dbg(TAG "%d", pConfiguration->GetProjectId());
 
 	// Verify the name of file to contains BT4
 	if(fileName.length() < 3 || (fileName.substr(0, 3) != "BT4"))
