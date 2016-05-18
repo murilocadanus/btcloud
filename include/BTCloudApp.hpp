@@ -40,7 +40,7 @@ namespace BTCloud {
  *  \details This class is responsable for start, intercept and finish
  * btcloud app.
  */
-class BTCloudApp : public IApp, public IEventFileSystemListener
+class BTCloudApp : public IApp//, public IEventFileSystemListener
 {
 	public:
 		/** \brief BTCloudApp - Default constructor. */
@@ -78,7 +78,7 @@ class BTCloudApp : public IApp, public IEventFileSystemListener
 		 * \return void
 		 *
 		 */
-		void OnFileSystemNotifyChange(const EventFileSystem *ev);
+		//void OnFileSystemNotifyChange(const EventFileSystem *ev);
 
 	private:
 		std::queue<string> qQueueBT4FileNames;

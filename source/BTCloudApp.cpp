@@ -41,7 +41,7 @@ bool BTCloudApp::Initialize()
 	Info(TAG "Initializing...");
 
 	// Add the listener to notify this object
-	pFileSystem->AddFileSystemListener(this);
+	//pFileSystem->AddFileSystemListener(this);
 
 	// Init mongo client
 	mongo::client::initialize();
@@ -55,6 +55,34 @@ bool BTCloudApp::Initialize()
 
 	// TODO Refactory to remove this
 	cFileManager.SetPath(pConfiguration->GetAppListeningPath());
+
+	activemq::library::ActiveMQCPP::initializeLibrary();
+	{
+		std::string brokerURI = pConfiguration->GetActiveMQTarget();
+
+		//BT4Producer producer(brokerURI, 1);
+		BT4Consumer consumer(brokerURI);
+
+		// Start the producer thread.
+		//Thread producerThread(&producer);
+		//producerThread.start();
+
+		// Start the consumer thread.
+		Thread consumerThread(&consumer);
+		consumerThread.start();
+
+		// Wait for the consumer to indicate that its ready to go.
+		consumer.waitUntilReady();
+
+		// Wait for the threads to complete.
+		//producerThread.join();
+		consumerThread.join();
+
+		//consumer.close();
+		//producer.close();
+	}
+
+	activemq::library::ActiveMQCPP::shutdownLibrary();
 
 	return true;
 }
@@ -76,7 +104,7 @@ bool BTCloudApp::Update(float dt)
 	else return false;
 }
 
-void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
+/*void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
 {
 	string filePath = ev->GetDirName() + ev->GetFileName();
 	Dbg(TAG "OnFileSystemNotifyChange %s", filePath.c_str());
@@ -84,7 +112,7 @@ void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
 	// Push file to queue case it is a new BT4
 	if(ev->GetFileName().substr(0, 3) == "BT4")
 		qQueueBT4FileNames.push(filePath);
-}
+}*/
 
 bool BTCloudApp::Shutdown()
 {
