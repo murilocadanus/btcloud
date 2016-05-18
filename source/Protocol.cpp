@@ -438,7 +438,7 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	bool digital2 = pTelemetry->ed6;
 	bool digital3 = pTelemetry->ed5;
 	bool digital4 = pTelemetry->ed4;
-	int32_t horimeter = pTelemetry->hourmeter;
+	double_t horimeter = pTelemetry->hourmeter;
 	double_t accelerometerX = pTelemetry->acelX;
 	double_t accelerometerY = pTelemetry->acelY;
 	double_t hodometer = pTelemetry->odometer;
@@ -775,7 +775,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 					}
 					catch (const std::out_of_range& e){}
 
-					lapso.rpm = rpm * 50;
+					lapso.rpm = rpm * 65;
 				}
 				// Acel x
 				if(controle->saida3)
