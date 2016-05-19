@@ -5,8 +5,9 @@ SOURCES +=	source/main.cpp \
 			source/io/FileMod.cpp \
 			source/io/SwapFile.cpp \
 			source/io/File.cpp \
-			source/util/ProtocolUtil.cpp
-
+			source/util/ProtocolUtil.cpp \
+			source/queue/BT4Consumer.cpp \
+			source/entities/Message.cpp
 
 HEADERS +=	\
 			include/Defines.hpp \
@@ -18,7 +19,9 @@ HEADERS +=	\
 			include/io/SwapFile.h \
 			include/io/File.h \
 			include/util/ProtocolUtil.hpp \
-    include/entities/ProtocolEntity.hpp
+			include/entities/ProtocolEntity.hpp \
+			include/queue/BT4Consumer.hpp \
+			include/entities/Message.hpp
 
 OTHER_FILES += resources/app.config \
 

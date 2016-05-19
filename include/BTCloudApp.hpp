@@ -17,16 +17,34 @@
 #ifndef BTCLOUD_APP_HPP
 #define BTCLOUD_APP_HPP
 
+#include "queue"
 #include <cstdlib>
 #include <iostream>
 #include <api/mysql/MySQLConnector.hpp>
 #include <interface/IEventFileSystemListener.hpp>
-#include "queue"
 #include <mongo/client/dbclient.h>
 #include "managers/BlueTecFileManager.h"
 #include "Defines.hpp"
 #include "Configuration.hpp"
 #include "Protocol.hpp"
+
+#include "queue/BT4Consumer.hpp"
+#include <activemq/library/ActiveMQCPP.h>
+#include <decaf/lang/Thread.h>
+#include <decaf/lang/Runnable.h>
+#include <decaf/util/concurrent/CountDownLatch.h>
+#include <decaf/lang/Integer.h>
+#include <decaf/lang/Long.h>
+#include <decaf/lang/System.h>
+#include <activemq/core/ActiveMQConnectionFactory.h>
+#include <activemq/util/Config.h>
+#include <cms/Connection.h>
+#include <cms/Session.h>
+#include <cms/TextMessage.h>
+#include <cms/BytesMessage.h>
+#include <cms/MapMessage.h>
+#include <cms/ExceptionListener.h>
+#include <cms/MessageListener.h>
 
 using namespace Sascar;
 using namespace Bluetec;
@@ -81,7 +99,7 @@ class BTCloudApp : public IApp//, public IEventFileSystemListener
 		//void OnFileSystemNotifyChange(const EventFileSystem *ev);
 
 	private:
-		std::queue<string> qQueueBT4FileNames;
+		BT4Consumer cBT4Consumer;
 		DBClientConnection cDBConnection;
 		BlueTecFileManager cFileManager;
 		Protocol cProtocol;

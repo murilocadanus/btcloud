@@ -20,7 +20,7 @@ namespace BTCloud {
 
 BTCloudApp::BTCloudApp()
 	: cDBConnection()
-	, qQueueBT4FileNames()
+	, cBT4Consumer(pConfiguration->GetActiveMQTarget())
 {
 }
 
@@ -50,7 +50,7 @@ bool BTCloudApp::Initialize()
 	pMysqlConnector->Initialize();
 
 	// Connect to mongo client
-	BTCloudApp::cDBConnection.connect(pConfiguration->GetMongoDBHost());
+	cDBConnection.connect(pConfiguration->GetMongoDBHost());
 	Info(TAG "Connected to mongodb");
 
 	// TODO Refactory to remove this
@@ -58,21 +58,16 @@ bool BTCloudApp::Initialize()
 
 	activemq::library::ActiveMQCPP::initializeLibrary();
 	{
-		std::string brokerURI = pConfiguration->GetActiveMQTarget();
-
-		//BT4Producer producer(brokerURI, 1);
-		BT4Consumer consumer(brokerURI);
-
 		// Start the producer thread.
 		//Thread producerThread(&producer);
 		//producerThread.start();
 
 		// Start the consumer thread.
-		Thread consumerThread(&consumer);
+		Thread consumerThread(&cBT4Consumer);
 		consumerThread.start();
 
 		// Wait for the consumer to indicate that its ready to go.
-		consumer.waitUntilReady();
+		cBT4Consumer.waitUntilReady();
 
 		// Wait for the threads to complete.
 		//producerThread.join();
@@ -89,16 +84,16 @@ bool BTCloudApp::Initialize()
 
 bool BTCloudApp::Update(float dt)
 {
-	if(!qQueueBT4FileNames.empty())
+	if(!cBT4Consumer.GetQueue().empty())
 	{
 		// Get file at top position
-		string filePath = qQueueBT4FileNames.front();
+		string filePath = cBT4Consumer.GetQueue().front();
 		int fileLength = filePath.length();
 		Dbg(TAG "%s %d -> %d", filePath.c_str(), fileLength, dt);
 
 		// Process
 		cProtocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
-		qQueueBT4FileNames.pop();
+		cBT4Consumer.GetQueue().pop();
 		return true;
 	}
 	else return false;

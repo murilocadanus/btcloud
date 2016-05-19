@@ -4,7 +4,7 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 INCLUDEPATH +=	include/ \
-				../libi9/include
+				../libi9/include \
 				/usr/include/apr-1.0
 
 CONFIG(debug, debug|release) {
