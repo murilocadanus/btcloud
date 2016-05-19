@@ -3,6 +3,7 @@
 #include "Configuration.hpp"
 #include "entities/Message.hpp"
 #include <unistd.h>
+#include "FileSystem.hpp"
 
 #define TAG "[BT4Consumer] "
 
@@ -15,8 +16,6 @@ BT4Consumer::BT4Consumer(const std::string& brokerURI)
 	, destination(NULL)
 	, consumer(NULL)
 	, brokerURI(brokerURI)
-	, cFileManager(pConfiguration->GetAppListeningPath())
-	, qQueueBT4FileNames()
 {
 }
 
@@ -105,8 +104,11 @@ void BT4Consumer::onMessage(const cms::Message* message)
 					Dbg(TAG "Message byte message %d", byteMessage->getBodyLength());
 					Dbg(TAG "Message body length %d", messageReceived.GetMessageSize());
 
-					cFileManager.SaveFile(messageReceived.GetClient(), messageReceived.GetPlate(),
-										messageReceived.GetName(), messageReceived.GetMessage(), byteMessage->getBodyLength());
+
+					pFileSystem->SaveFile(messageReceived.GetClient(), messageReceived.GetPlate(),
+						messageReceived.GetName(), messageReceived.GetMessage(), byteMessage->getBodyLength());
+					/*cFileManager.SaveFile(messageReceived.GetClient(), messageReceived.GetPlate(),
+										messageReceived.GetName(), messageReceived.GetMessage(), byteMessage->getBodyLength());*/
 
 					Info(TAG "Received message, name: %s type: %s client: %s plate: %s source: %s date: %i",
 						 messageReceived.GetName().c_str(), messageReceived.GetType().c_str(),
@@ -155,10 +157,6 @@ void BT4Consumer::cleanup()
 		try
 		{
 			connection->close();
-
-			// Clean current queue swaping by empty queue
-			std::queue<string> empty;
-			std::swap(qQueueBT4FileNames , empty);
 		}
 		catch(cms::CMSException& ex)
 		{

@@ -49,8 +49,6 @@ class BT4Consumer : public ExceptionListener, public MessageListener, public Run
 		// registered as an ExceptionListener with the connection.
 		virtual void onException(const CMSException& ex AMQCPP_UNUSED);
 
-		inline std::queue<string> &GetQueue() { return qQueueBT4FileNames; }
-
 	private:
 		void cleanup();
 
@@ -59,14 +57,12 @@ class BT4Consumer : public ExceptionListener, public MessageListener, public Run
 		BT4Consumer& operator=(const BT4Consumer&);
 
 	private:
-		std::queue<string> qQueueBT4FileNames;
 		CountDownLatch latch;
 		Connection* connection;
 		Session* session;
 		Destination* destination;
 		MessageConsumer* consumer;
 		std::string brokerURI;
-		Bluetec::BlueTecFileManager cFileManager;
 };
 
 } // namespace

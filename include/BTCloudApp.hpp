@@ -58,7 +58,7 @@ namespace BTCloud {
  *  \details This class is responsable for start, intercept and finish
  * btcloud app.
  */
-class BTCloudApp : public IApp//, public IEventFileSystemListener
+class BTCloudApp : public IApp, public IEventFileSystemListener
 {
 	public:
 		/** \brief BTCloudApp - Default constructor. */
@@ -74,14 +74,6 @@ class BTCloudApp : public IApp//, public IEventFileSystemListener
 		 */
 		virtual bool Initialize() override;
 
-		/** \brief Update - Code to be executed in a loop.
-		 *
-		 * \param dt float
-		 * \return bool
-		 *
-		 */
-		virtual bool Update(float dt) override;
-
 		/** \brief Shutdown - Code to finish all objects used.
 		 *
 		 * \return void
@@ -96,10 +88,9 @@ class BTCloudApp : public IApp//, public IEventFileSystemListener
 		 * \return void
 		 *
 		 */
-		//void OnFileSystemNotifyChange(const EventFileSystem *ev);
+		void OnFileSystemNotifyChange(const EventFileSystem *ev);
 
 	private:
-		BT4Consumer cBT4Consumer;
 		DBClientConnection cDBConnection;
 		BlueTecFileManager cFileManager;
 		Protocol cProtocol;
