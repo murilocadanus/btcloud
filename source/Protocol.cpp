@@ -775,7 +775,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 					}
 					catch (const std::out_of_range& e){}
 
-					lapso.rpm = rpm * 65;
+					lapso.rpm = rpm * 50;
 				}
 				// Acel x
 				if(controle->saida3)
@@ -793,7 +793,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 				if(controle->saida1)
 				{
 					index++;
-					bufferED[0] = dados.length() == index ? dados.at(index - 1) : dados.at(index);
+					bufferED[0] = dados.length() == (unsigned int)index ? dados.at(index - 1) : dados.at(index);
 					ed = (BTCloud::Util::Output*) bufferED;
 
 					lapso.ed1 = (unsigned int) ed->saida0;
@@ -864,33 +864,6 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 							// Setting data to position package
 							pPosition->lat = lat;
 							pPosition->lon = lon;
-							pPosition->dateTime = lapso.timestamp;
-							pPosition->dateArrive = pTimer->GetCurrentTime();
-							pPosition->inf_motorista.id = lapso.ibtMotorista;
-
-							if(lapso.rpm > 0)
-								pEventFlag->ignition = 1;
-							else
-								pEventFlag->ignition = 0;
-
-							pOdoVel->velocity = lapso.velocidade;
-
-							Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
-							Dbg(TAG "Position found, sending package with %d lapses of %d bytes",
-								sizePacote / iLapsoSize, iLapsoSize);
-
-							// Send position package to queue in final protobuf format
-							//bluetecPacote.SerializeToString(&serializado);
-							//BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
-
-							// Save JSON at MongoDB
-							CreatePosition(isOdometerIncreased, isHourmeterIncreased);
-
-							// Reset entity
-							cPackage.Clear();
-
-							// Reset maximum size of packet
-							sizePacote = 0;
 						}
 					}
 
@@ -926,18 +899,6 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 				{
 					Dbg(TAG "Maximum size reached, sending package with %d lapses with %d bytes", sizePacote / iLapsoSize, iLapsoSize);
 
-					// Send case overlaps the size
-					//bluetecPacote.SerializeToString(&serializado);
-
-					// Save data at MongoDB
-					/*pPosition->dateTime = lapso.timestamp;
-					pPosition->dateArrive = pTimer->GetCurrentTime();
-					BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
-					CreatePosition();
-
-					// Reset entity
-					cPackage.Clear();*/
-
 					// Reset the value of package with the size of lapse
 					sizePacote = iLapsoSize;
 				}
@@ -945,6 +906,30 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 				{
 					BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 				}
+
+				pPosition->dateTime = lapso.timestamp;
+				pPosition->dateArrive = pTimer->GetCurrentTime();
+				pPosition->inf_motorista.id = lapso.ibtMotorista;
+
+				if(lapso.rpm > 0)
+					pEventFlag->ignition = 1;
+				else
+					pEventFlag->ignition = 0;
+
+				pOdoVel->velocity = lapso.velocidade;
+
+				Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
+				Dbg(TAG "Position found, sending package with %d lapses of %d bytes", sizePacote / iLapsoSize, iLapsoSize);
+
+				// Save JSON at MongoDB
+				CreatePosition(isOdometerIncreased, isHourmeterIncreased);
+
+				// Reset entity
+				cPackage.Clear();
+
+				// Reset maximum size of packet
+				sizePacote = 0;
+
 				lapso.timestamp += hfull.lapso;
 			}
 			else
@@ -957,13 +942,6 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 			Error(TAG "Index error %d %s", index, e.what());
 		}
 	}
-
-	//bluetecPacote.SerializeToString(&serializado);
-	/*pPosition->dateTime = lapso.timestamp;
-	pPosition->dateArrive = pTimer->GetCurrentTime();
-	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
-	CreatePosition();
-	cPackage.Clear();*/
 }
 
 void Protocol::GetClientData(DataCache &retorno, std::string chave)
