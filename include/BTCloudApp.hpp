@@ -17,18 +17,17 @@
 #ifndef BTCLOUD_APP_HPP
 #define BTCLOUD_APP_HPP
 
-#include "queue"
 #include <cstdlib>
 #include <iostream>
-#include <api/mysql/MySQLConnector.hpp>
 #include <interface/IEventFileSystemListener.hpp>
 #include <mongo/client/dbclient.h>
 #include "managers/BlueTecFileManager.h"
 #include "Defines.hpp"
 #include "Configuration.hpp"
-#include "Protocol.hpp"
+#include "queue"
 
 #include "queue/BT4Consumer.hpp"
+#include "queue/BT4Producer.hpp"
 #include <activemq/library/ActiveMQCPP.h>
 #include <decaf/lang/Thread.h>
 #include <decaf/lang/Runnable.h>
@@ -49,7 +48,6 @@
 using namespace Sascar;
 using namespace Bluetec;
 using namespace std;
-using namespace mongo;
 
 namespace BTCloud {
 
@@ -58,7 +56,7 @@ namespace BTCloud {
  *  \details This class is responsable for start, intercept and finish
  * btcloud app.
  */
-class BTCloudApp : public IApp, public IEventFileSystemListener
+class BTCloudApp : public IApp, public ExceptionListener, public MessageListener//, public IEventFileSystemListener
 {
 	public:
 		/** \brief BTCloudApp - Default constructor. */
@@ -88,12 +86,27 @@ class BTCloudApp : public IApp, public IEventFileSystemListener
 		 * \return void
 		 *
 		 */
-		void OnFileSystemNotifyChange(const EventFileSystem *ev);
+		//void OnFileSystemNotifyChange(const EventFileSystem *ev);
+
+		// Called from the consumer since this class is a registered MessageListener.
+		virtual void onMessage(const cms::Message* message);
+
+		// If something bad happens you see it here as this class is also been
+		// registered as an ExceptionListener with the connection.
+		virtual void onException(const CMSException& ex AMQCPP_UNUSED);
+
+		virtual bool Update(float dt);
 
 	private:
-		DBClientConnection cDBConnection;
 		BlueTecFileManager cFileManager;
-		Protocol cProtocol;
+		DBClientConnection cDBConnection;
+		Connection* connection;
+		Session* session;
+		Destination* destination;
+		MessageConsumer* consumer;
+		CountDownLatch latch;
+
+		std::queue<std::string> qQueueFiles;
 };
 }
 

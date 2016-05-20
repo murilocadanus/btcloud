@@ -946,6 +946,9 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 
 void Protocol::GetClientData(DataCache &retorno, std::string chave)
 {
+	// Init mysql client
+	pMysqlConnector->Initialize();
+
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
@@ -996,13 +999,16 @@ void Protocol::GetClientData(DataCache &retorno, std::string chave)
 
 uint32_t Protocol::GetClient(std::string clientName)
 {
-	uint32_t clientId = 0;
+	// Init mysql client
+	pMysqlConnector->Initialize();
 
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
 							 , pConfiguration->GetMySQLPassword()
 							 , pConfiguration->GetMySQLScheme());
+
+	uint32_t clientId = 0;
 
 	string query("");
 	query.append("SELECT id FROM clientes WHERE clinome = '").append(clientName).append("'");
@@ -1035,6 +1041,9 @@ uint32_t Protocol::GetClient(std::string clientName)
 
 uint32_t Protocol::CreateClient(std::string clientName)
 {
+	// Init mysql client
+	pMysqlConnector->Initialize();
+
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
@@ -1062,6 +1071,9 @@ uint32_t Protocol::CreateClient(std::string clientName)
 
 uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 {
+	// Init mysql client
+	pMysqlConnector->Initialize();
+
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
@@ -1092,13 +1104,16 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 
 uint32_t Protocol::GetVehicle(uint32_t equipId)
 {
-	uint32_t vehicleId = 0;
+	// Init mysql client
+	pMysqlConnector->Initialize();
 
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
 							 , pConfiguration->GetMySQLPassword()
 							 , pConfiguration->GetMySQLScheme());
+
+	uint32_t vehicleId = 0;
 
 	string query("");
 	query.append("SELECT veioid FROM veiculos WHERE vei_equoid = ").append(std::to_string(equipId));
@@ -1131,14 +1146,18 @@ uint32_t Protocol::GetVehicle(uint32_t equipId)
 
 uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::string plate)
 {
-	int vehicleId = GetVehicle(equipId);
-	int id = 0;
+
+	// Init mysql client
+	pMysqlConnector->Initialize();
 
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
 							 , pConfiguration->GetMySQLPassword()
 							 , pConfiguration->GetMySQLScheme());
+
+	int vehicleId = GetVehicle(equipId);
+	int id = 0;
 
 	string query("");
 

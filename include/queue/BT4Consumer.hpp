@@ -22,7 +22,7 @@
 #include <iostream>
 #include <memory>
 #include "managers/BlueTecFileManager.h"
-#include "queue"
+#include "Protocol.hpp"
 
 using namespace activemq::core;
 using namespace decaf::util::concurrent;
@@ -30,6 +30,8 @@ using namespace decaf::util;
 using namespace decaf::lang;
 using namespace cms;
 using namespace std;
+using namespace BTCloud;
+using namespace mongo;
 
 namespace Sascar {
 
@@ -63,6 +65,8 @@ class BT4Consumer : public ExceptionListener, public MessageListener, public Run
 		Destination* destination;
 		MessageConsumer* consumer;
 		std::string brokerURI;
+		Protocol cProtocol;
+		DBClientConnection cDBConnection;
 };
 
 } // namespace

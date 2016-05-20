@@ -4,8 +4,11 @@
 #include "entities/Message.hpp"
 #include <unistd.h>
 #include "FileSystem.hpp"
+#include <mutex>
 
 #define TAG "[BT4Consumer] "
+
+std::mutex g_lock;
 
 namespace Sascar {
 
@@ -16,6 +19,7 @@ BT4Consumer::BT4Consumer(const std::string& brokerURI)
 	, destination(NULL)
 	, consumer(NULL)
 	, brokerURI(brokerURI)
+	, cDBConnection()
 {
 }
 
@@ -39,6 +43,14 @@ void BT4Consumer::run()
 	try
 	{
 		Info(TAG "Starting run");
+
+		// Init mongo client
+		mongo::client::initialize();
+
+		// Connect to mongo client
+		cDBConnection.connect(pConfiguration->GetMongoDBHost());
+		Info(TAG "Connected to mongodb");
+
 		// Create a ConnectionFactory
 		auto_ptr<ConnectionFactory> connectionFactory(ConnectionFactory::createCMSConnectionFactory(brokerURI));
 
@@ -103,17 +115,20 @@ void BT4Consumer::onMessage(const cms::Message* message)
 
 					Dbg(TAG "Message byte message %d", byteMessage->getBodyLength());
 					Dbg(TAG "Message body length %d", messageReceived.GetMessageSize());
-
-
-					pFileSystem->SaveFile(messageReceived.GetClient(), messageReceived.GetPlate(),
-						messageReceived.GetName(), messageReceived.GetMessage(), byteMessage->getBodyLength());
-					/*cFileManager.SaveFile(messageReceived.GetClient(), messageReceived.GetPlate(),
-										messageReceived.GetName(), messageReceived.GetMessage(), byteMessage->getBodyLength());*/
-
 					Info(TAG "Received message, name: %s type: %s client: %s plate: %s source: %s date: %i",
-						 messageReceived.GetName().c_str(), messageReceived.GetType().c_str(),
+						messageReceived.GetName().c_str(), messageReceived.GetType().c_str(),
 						messageReceived.GetClient().c_str(), messageReceived.GetPlate().c_str(),
-						 messageReceived.GetSource().c_str(), messageReceived.GetUpdatedAt());
+						messageReceived.GetSource().c_str(), messageReceived.GetUpdatedAt());
+
+					/*
+					bool written = pFileSystem->SaveFile(messageReceived.GetClient(), messageReceived.GetPlate(),
+						messageReceived.GetName(), messageReceived.GetMessage(), byteMessage->getBodyLength());
+
+					if(written)
+					{
+						string filePath = pFileSystem->GetPath() + messageReceived.GetClient() + "/" + messageReceived.GetPlate() + "/" + messageReceived.GetName();
+						cProtocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
+					}*/
 
 					sleep(pConfiguration->GetSleepProcessInterval());
 				}
@@ -163,6 +178,11 @@ void BT4Consumer::cleanup()
 			Error(TAG "Exception occured: %s", ex.getMessage().c_str());
 		}
 	}
+
+	// Disconnect from mongodb
+	BSONObj info;
+	cDBConnection.logout(pConfiguration->GetMongoDBHost(), info);
+	Info(TAG "Disconnected from mongodb");
 
 	// Destroy resources.
 	try
