@@ -155,6 +155,8 @@ void BTCloudApp::onMessage(const cms::Message* message)
 			{
 				if(messageReceived.GetType() == "BT4")
 				{
+					mutexQueue.lock();
+
 					messageReceived.SetMessageSize(byteMessage->getBodyLength());
 					messageReceived.SetMessage(buffer);
 
@@ -170,15 +172,13 @@ void BTCloudApp::onMessage(const cms::Message* message)
 
 					if(written)
 					{
-						mutexQueue.lock();
-
 						string filePath = pFileSystem->GetPath() + messageReceived.GetClient() + "/" + messageReceived.GetPlate() + "/" + messageReceived.GetName();
 						qQueueFiles.push(filePath);
-
-						mutexQueue.unlock();
 					}
 
 					sleep(pConfiguration->GetSleepProcessInterval());
+
+					mutexQueue.unlock();
 				}
 				else
 				{
@@ -219,10 +219,10 @@ bool BTCloudApp::Update(float dt)
 		string filePath = qQueueFiles.front();
 		qQueueFiles.pop();
 
-		mutexQueue.unlock();
-
 		Protocol protocol;
 		protocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
+
+		mutexQueue.unlock();
 
 	}
 }
