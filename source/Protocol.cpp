@@ -1185,7 +1185,7 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 	Dbg(TAG "Query executed: %d", exec);
 
 	// return inserted registry id
-	if(exec) id = pMysqlConnector->InsertedID();
+	if(exec) id = vehicleId;
 
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
