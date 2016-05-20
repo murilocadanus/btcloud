@@ -1083,8 +1083,7 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 	string query("");
 	query.append("INSERT INTO equipamentos SET equip_id = default")
 			.append(", projetos_proj_id = ").append(std::to_string(projectId))
-			.append(", equip_imei = ").append(std::to_string(equipIMei))
-			.append(", equip_insert_datetime = CURRENT_TIMESTAMP");
+			.append(", equip_imei = ").append(std::to_string(equipIMei));
 	Dbg(TAG "Query: %s", query.c_str());
 
 	bool exec = pMysqlConnector->Execute(query);
@@ -1174,7 +1173,8 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 
 	query.clear();
 
-	query.append("INSERT INTO veiculos SET veioid = default")
+	query.append("INSERT INTO veiculos SET ")
+			.append("veioid = ").append(std::to_string(vehicleId))
 			.append(", vei_clioid = ").append(std::to_string(clientId))
 			.append(", vei_equoid = ").append(std::to_string(equipId))
 			.append(", vei_placa = '").append(plate).append("'");
