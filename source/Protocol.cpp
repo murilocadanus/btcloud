@@ -1069,6 +1069,44 @@ uint32_t Protocol::CreateClient(std::string clientName)
 	return id;
 }
 
+uint32_t Protocol::CreateEquipmentImei()
+{
+	// Init mysql client
+	pMysqlConnector->Initialize();
+
+	// Connect to mysql
+	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
+							 , pConfiguration->GetMySQLUser()
+							 , pConfiguration->GetMySQLPassword()
+							 , pConfiguration->GetMySQLScheme());
+
+	uint32_t id = 0;
+
+	string query("");
+	query.append("SELECT (RAND() * 9999999999999) + 99");
+	Dbg(TAG "Query: %s", query.c_str());
+
+	// Get vehicle id
+	if(pMysqlConnector->Execute(query))
+	{
+		Dbg(TAG "Query executed");
+		auto mysqlResult = pMysqlConnector->Result();
+		if(mysqlResult)
+		{
+			Dbg(TAG "Query resulted");
+
+			auto mysqlRow = pMysqlConnector->FetchRow(mysqlResult);
+			if(mysqlRow)
+			{
+				id = atoi(mysqlRow[0]);
+				pMysqlConnector->FreeResult(mysqlResult);
+			}
+		}
+	}
+
+	return id;
+}
+
 uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 {
 	// Init mysql client
@@ -1081,9 +1119,11 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 							 , pConfiguration->GetMySQLScheme());
 
 	string query("");
-	query.append("INSERT INTO equipamentos SET equip_id = default")
-			.append(", projetos_proj_id = ").append(std::to_string(projectId))
+
+	query.append("INSERT INTO equipamentos SET ")
+			.append("projetos_proj_id = ").append(std::to_string(projectId))
 			.append(", equip_imei = ").append(std::to_string(equipIMei));
+
 	Dbg(TAG "Query: %s", query.c_str());
 
 	bool exec = pMysqlConnector->Execute(query);
@@ -1092,7 +1132,30 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 	int id = 0;
 
 	// return inserted registry id
-	if(exec) id = pMysqlConnector->InsertedID();
+	if(exec)
+	{
+		string query("");
+		query.append("SELECT equip_id FROM equipamentos WHERE equip_imei = ").append(std::to_string(equipIMei));
+		Dbg(TAG "Query: %s", query.c_str());
+
+		// Get equip id
+		if(pMysqlConnector->Execute(query))
+		{
+			Dbg(TAG "Query executed");
+			auto mysqlResult = pMysqlConnector->Result();
+			if(mysqlResult)
+			{
+				Dbg(TAG "Query resulted");
+
+				auto mysqlRow = pMysqlConnector->FetchRow(mysqlResult);
+				if(mysqlRow)
+				{
+					id = atoi(mysqlRow[0]);
+					pMysqlConnector->FreeResult(mysqlResult);
+				}
+			}
+		}
+	}
 
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
@@ -1155,27 +1218,28 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 							 , pConfiguration->GetMySQLPassword()
 							 , pConfiguration->GetMySQLScheme());
 
-	int vehicleId = GetVehicle(equipId);
+	//int vehicleId = GetVehicle(equipId);
 	int id = 0;
 
 	string query("");
 
 	// FIX: Deleting and then inserting due update problem where it not affect row
-	query.append("DELETE FROM veiculos WHERE veioid = ").append(std::to_string(vehicleId));
+	/*query.append("DELETE FROM veiculos WHERE veioid = ").append(std::to_string(vehicleId));
 	Dbg(TAG "Delete Query: %s", query.c_str());
-	pMysqlConnector->Execute(query);
 
-	/*query.append("UPDATE veiculos SET ")
+	bool exec = pMysqlConnector->Execute(query);
+	Dbg(TAG "Delete query executed: %d", exec);
+
+	query.append("UPDATE veiculos SET ")
 			.append("vei_clioid = ").append(std::to_string(clientId))
 			.append(", vei_placa = '").append(plate).append("'")
 			.append(", vei_alias = '").append(plate).append("'")
-			.append(" WHERE veioid = ").append(std::to_string(vehicleId));*/
+			.append(" WHERE veioid = ").append(std::to_string(vehicleId));
 
-	query.clear();
+	query.clear();*/
 
 	query.append("INSERT INTO veiculos SET ")
-			.append("veioid = ").append(std::to_string(vehicleId))
-			.append(", vei_clioid = ").append(std::to_string(clientId))
+			.append("vei_clioid = ").append(std::to_string(clientId))
 			.append(", vei_equoid = ").append(std::to_string(equipId))
 			.append(", vei_placa = '").append(plate).append("'");
 
@@ -1185,7 +1249,7 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 	Dbg(TAG "Query executed: %d", exec);
 
 	// return inserted registry id
-	if(exec) id = pMysqlConnector->InsertedID();
+	if(exec) id = GetVehicle(equipId);
 
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
@@ -1219,7 +1283,7 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 
 			// Generate equipment imei
 			srand(time(NULL));
-			int imei = rand();
+			uint32_t imei = CreateEquipmentImei();
 
 			// FIX: Verify why 0 is returned from pConfiguration
 			uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), imei);
