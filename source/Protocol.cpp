@@ -1104,6 +1104,9 @@ uint32_t Protocol::CreateEquipmentImei()
 		}
 	}
 
+	// Diconnect from mysql
+	pMysqlConnector->Disconnect();
+
 	return id;
 }
 
