@@ -1169,15 +1169,6 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 
 uint32_t Protocol::GetVehicle(uint32_t equipId)
 {
-	// Init mysql client
-	pMysqlConnector->Initialize();
-
-	// Connect to mysql
-	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
-							 , pConfiguration->GetMySQLUser()
-							 , pConfiguration->GetMySQLPassword()
-							 , pConfiguration->GetMySQLScheme());
-
 	uint32_t vehicleId = 0;
 
 	string query("");
@@ -1201,9 +1192,6 @@ uint32_t Protocol::GetVehicle(uint32_t equipId)
 			}
 		}
 	}
-
-	// Diconnect from mysql
-	pMysqlConnector->Disconnect();
 
 	Dbg(TAG "ClientID: %d", vehicleId);
 	return vehicleId;
