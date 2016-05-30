@@ -467,7 +467,7 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataPosJSON);
 
 		// Get last position
-		uint64_t lastPositionDate = GetLastPosition(dataCache.veioId, datePosition);
+		uint64_t lastPositionDate = GetLastPosition(vehicle, datePosition);
 
 		// Insert/Update data at ultima_posicao
 		if(lastPositionDate == 0)
@@ -478,7 +478,7 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 		else if(lastPositionDate < datePosition)
 		{
 			Dbg(TAG "Updating position at mongodb collection ultima_posicao");
-			UpdateLastPosition(dataCache.veioId, datePosition, dateArrival);
+			UpdateLastPosition(vehicle, datePosition, dateArrival);
 		}
 		else
 			Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
