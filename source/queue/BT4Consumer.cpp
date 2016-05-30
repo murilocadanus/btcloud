@@ -45,7 +45,7 @@ void BT4Consumer::run()
 		Info(TAG "Starting run");
 
 		// Init mongo client
-		mongo::client::initialize();
+//		mongo::client::initialize();
 
 		// Connect to mongo client
 		cDBConnection.connect(pConfiguration->GetMongoDBHost());

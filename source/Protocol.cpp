@@ -227,46 +227,37 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	// Create a position for this HSYNC if it has a position
 	bool isGPS = (unsigned char) hsync.at(1) >= 0xA0;
 
-	if(isGPS)
-	{
-		/*const char *controlByte = hsync.substr(1, 1).c_str();
-		BTCloud::Util::Output *p = (BTCloud::Util::Output*) controlByte;
+	double lat = isGPS ? BTCloud::Util::ParseLatitude(hsync.substr(2, 3), 1) : 0.0;
+	double lon = isGPS ? BTCloud::Util::ParseLongitude(hsync.substr(5, 3), 1, 0) : 0.0;
 
-		double lat = BTCloud::Util::ParseLatitude(hsync.substr(2, 3), p->saida2);
-		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), p->saida1, p->saida0);*/
+	Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
-		double lat = BTCloud::Util::ParseLatitude(hsync.substr(2, 3), 1);
-		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), 1, 0);
+	// Setting data to position package
+	pPosition->lat = lat;
+	pPosition->lon = lon;
 
-		Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
+	pPosition->dateTime = lapso.timestamp;
+	pPosition->dateArrive = pTimer->GetCurrentTime();
+	pPosition->inf_motorista.id = lapso.ibtMotorista;
 
-		// Setting data to position package
-		pPosition->lat = lat;
-		pPosition->lon = lon;
-		pPosition->dateTime = lapso.timestamp;
-		pPosition->dateArrive = pTimer->GetCurrentTime();
-		pPosition->inf_motorista.id = lapso.ibtMotorista;
+	if(lapso.rpm > 0 && lapso.velocidade > 0)
+		pEventFlag->ignition = 1;
+	else
+		pEventFlag->ignition = 0;
 
-		if(lapso.rpm > 0 && lapso.velocidade > 0)
-			pEventFlag->ignition = 1;
-		else
-			pEventFlag->ignition = 0;
+	pOdoVel->velocity = lapso.velocidade;
 
-		pOdoVel->velocity = lapso.velocidade;
+	Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
 
+	// Send position package to queue in final protobuf format
+	//bluetecPacote.SerializeToString(&serializado);
+	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
-		Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
+	// Save JSON at MongoDB
+	CreatePosition(false, false);
 
-		// Send position package to queue in final protobuf format
-		//bluetecPacote.SerializeToString(&serializado);
-		BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
-
-		// Save JSON at MongoDB
-		CreatePosition(false, false);
-
-		// Reset entity
-		cPackage.Clear();
-	}
+	// Reset entity
+	cPackage.Clear();
 }
 
 void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)

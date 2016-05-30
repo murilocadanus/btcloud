@@ -35,7 +35,7 @@ BTCloudApp::BTCloudApp()
 BTCloudApp::~BTCloudApp()
 {
 	// Release mongodb connection
-	mongo::client::shutdown(0);
+//	mongo::client::shutdown();
 
 	// Release mysql connection
 	//if (cMysqlConnection)
@@ -67,6 +67,31 @@ bool BTCloudApp::Initialize()
 		cDBConnection.connect(pConfiguration->GetMongoDBHost());
 		Info(TAG "Connected to mongodb");
 
+		// Case a database, user and password are defined, use it to authenticate
+		if(pConfiguration->GetMongoDBDatabase() != "" && pConfiguration->GetMongoDBUser() != "" && pConfiguration->GetMongoDBPassword() != "")
+		{
+			BSONObj authCredentials = BSON("user" << pConfiguration->GetMongoDBUser() <<
+											"db" << pConfiguration->GetMongoDBDatabase() <<
+											"pwd" << pConfiguration->GetMongoDBPassword() <<
+											"digestPassword" << true <<
+											"mechanism" << pConfiguration->GetMongoDBAuthMechanism());
+
+			cDBConnection.auth(authCredentials);
+
+			/*string authMongoError;
+
+			bool isAuthMongoDB = cDBConnection.auth(pConfiguration->GetMongoDBDatabase(),
+											 pConfiguration->GetMongoDBUser(),
+											 pConfiguration->GetMongoDBPassword(), authMongoError);
+
+			if(!isAuthMongoDB)
+			{
+				Error(TAG "Auth fail when trying to connect to mongodb");
+				exit(1);
+			}*/
+		}
+
+
 		// Create a ConnectionFactory
 		auto_ptr<ConnectionFactory> connectionFactory(ConnectionFactory::createCMSConnectionFactory(pConfiguration->GetActiveMQTarget()));
 
@@ -92,11 +117,17 @@ bool BTCloudApp::Initialize()
 
 		consumer->setMessageListener(this);
 	}
+	catch (DBException& e)
+	{
+		Error(TAG "Exception occured: %d: %s", e.getCode(), e.getInfo().msg.c_str());
+		return false;
+	}
 	catch (CMSException& e)
 	{
 		// Indicate we are ready for messages.
 		latch.countDown();
 		Error(TAG "Exception occured: %s", e.getMessage().c_str());
+		return false;
 	}
 
 	/*{
