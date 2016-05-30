@@ -47,7 +47,7 @@ class Message
 		string sPlate;
 		string sClient;
 		uint8_t *pMessage;
-		int iMessageSize;
+		uint64_t iMessageSize;
 		uint64_t iUpdatedAt;
 		string sSource;
 };

@@ -23,35 +23,27 @@ using namespace std;
 namespace BTCloud {
 
 BTCloudApp::BTCloudApp()
-	: latch(1)
+	: cFileManager()
+	, cDBConnection()
 	, connection(NULL)
 	, session(NULL)
 	, destination(NULL)
 	, consumer(NULL)
-	, cDBConnection()
+	, latch(1)
 {
 }
 
 BTCloudApp::~BTCloudApp()
 {
 	// Release mongodb connection
-//	mongo::client::shutdown();
-
-	// Release mysql connection
-	//if (cMysqlConnection)
-	//	delete(cMysqlConnection);
-
-	//cMysqlConnection = nullptr;
+	mongo::client::shutdown();
 }
 
 bool BTCloudApp::Initialize()
 {
 	Info(TAG "Initializing...");
 
-	// Add the listener to notify this object
-	//pFileSystem->AddFileSystemListener(this);
-
-	// TODO Refactory to remove this
+	// Set app listening path
 	cFileManager.SetPath(pConfiguration->GetAppListeningPath());
 
 	activemq::library::ActiveMQCPP::initializeLibrary();
@@ -77,18 +69,6 @@ bool BTCloudApp::Initialize()
 											"mechanism" << pConfiguration->GetMongoDBAuthMechanism());
 
 			cDBConnection.auth(authCredentials);
-
-			/*string authMongoError;
-
-			bool isAuthMongoDB = cDBConnection.auth(pConfiguration->GetMongoDBDatabase(),
-											 pConfiguration->GetMongoDBUser(),
-											 pConfiguration->GetMongoDBPassword(), authMongoError);
-
-			if(!isAuthMongoDB)
-			{
-				Error(TAG "Auth fail when trying to connect to mongodb");
-				exit(1);
-			}*/
 		}
 
 
@@ -130,38 +110,8 @@ bool BTCloudApp::Initialize()
 		return false;
 	}
 
-	/*{
-		BT4Consumer consumer(pConfiguration->GetActiveMQTarget());
-		BT4Producer producer();
-
-		// Start the consumer thread.
-		Thread consumerThread(&consumer);
-		consumerThread.start();
-
-		// Start the producer thread.
-		Thread producerThread(&producer);
-		producerThread.start();
-
-		// Wait for the consumer to indicate that its ready to go.
-		consumer.waitUntilReady();
-
-		// Wait for the threads to complete.
-		consumerThread.join();
-		producerThread.join();
-	}*/
-
-
 	return true;
 }
-
-/*void BTCloudApp::OnFileSystemNotifyChange(const EventFileSystem *ev)
-{
-	string filePath = ev->GetDirName() + ev->GetFileName();
-	Dbg(TAG "OnFileSystemNotifyChange %s", filePath.c_str());
-
-	// Process
-	//cProtocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
-}*/
 
 void BTCloudApp::onMessage(const cms::Message* message)
 {
@@ -254,17 +204,15 @@ bool BTCloudApp::Update(float dt)
 		protocol.Process(filePath.c_str(), filePath.length(), &cDBConnection);
 
 		mutexQueue.unlock();
-
 	}
+
+	return true;
 }
 
 bool BTCloudApp::Shutdown()
 {
 	Info(TAG "Shutting down...");
 	activemq::library::ActiveMQCPP::shutdownLibrary();
-
-	// Finish thread consumer
-	//consumerThread.close();
 
 	return true;
 }
