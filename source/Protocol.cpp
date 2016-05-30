@@ -1246,8 +1246,8 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 void Protocol::FillDataContract(std::string clientName, std::string plate, DataCache &retorno)
 {
 	// Use a local cache to avoid access mysql db
-	if(retorno.plate.compare(plate) != 0)
-	{
+	/*if(retorno.plate.compare(plate) != 0)
+	{*/
 		retorno.veioId = 0;
 		retorno.esn = atoi(plate.c_str());
 
@@ -1277,7 +1277,7 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 			retorno.id = equipId;
 			retorno.clientName = clientName;
 		}
-	}
+	//}
 }
 
 void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbClient)
