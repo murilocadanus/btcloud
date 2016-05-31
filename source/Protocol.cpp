@@ -466,22 +466,26 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 		// Insert json data at posicao
 		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataPosJSON);
 
-		// Get last position
-		uint64_t lastPositionDate = GetLastPosition(vehicle, datePosition);
+		// Verify if has a valid position
+		if(abs(long2) != 0 && abs(lat2) != 0)
+		{
+			// Get last position
+			uint64_t lastPositionDate = GetLastPosition(vehicle, datePosition);
 
-		// Insert/Update data at ultima_posicao
-		if(lastPositionDate == 0)
-		{
-			Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
-			pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataPosJSON);
+			// Insert/Update data at ultima_posicao
+			if(lastPositionDate == 0)
+			{
+				Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
+				pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataPosJSON);
+			}
+			else if(lastPositionDate < datePosition)
+			{
+				Dbg(TAG "Updating position at mongodb collection ultima_posicao");
+				UpdateLastPosition(vehicle, datePosition, dateArrival);
+			}
+			else
+				Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
 		}
-		else if(lastPositionDate < datePosition)
-		{
-			Dbg(TAG "Updating position at mongodb collection ultima_posicao");
-			UpdateLastPosition(vehicle, datePosition, dateArrival);
-		}
-		else
-			Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
 	}
 	catch(std::exception &e)
 	{
