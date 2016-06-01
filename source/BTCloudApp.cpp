@@ -134,7 +134,10 @@ void BTCloudApp::onMessage(const cms::Message* message)
 		{
 			if (byteMessage->getBodyLength() > 0)
 			{
-				if(messageReceived.GetType() == "BT4")
+				std::vector<string> c = pConfiguration->GetCollectionClients();
+
+				// Search for current client at available clientes to proccess collection
+				if(messageReceived.GetType() == "BT4" && (c.size() == 0 || std::find(c.begin(), c.end(), messageReceived.GetClient()) != c.end()))
 				{
 					mutexQueue.lock();
 
@@ -163,7 +166,7 @@ void BTCloudApp::onMessage(const cms::Message* message)
 				}
 				else
 				{
-					Dbg(TAG "Not a BT4 message, name: %s type: %s client: %s plate: %s source: %s date: %i",
+					Info(TAG "Not a BT4 message or is a authorized client, name: %s type: %s client: %s plate: %s source: %s date: %i",
 						 messageReceived.GetName().c_str(), messageReceived.GetType().c_str(),
 						messageReceived.GetClient().c_str(), messageReceived.GetPlate().c_str(),
 						 messageReceived.GetSource().c_str(), messageReceived.GetUpdatedAt());
