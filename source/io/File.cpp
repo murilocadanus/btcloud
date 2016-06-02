@@ -74,7 +74,7 @@ void File::SetPath(std::string path)
 
 void File::CreateDir(std::string directory)
 {
-	Info(TAG "Creating directory %s", directory.c_str());
+	//Info(TAG "Creating directory %s", directory.c_str());
 
 	int fdTemp = mkdirat(this->dirFd, directory.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
@@ -93,7 +93,7 @@ void File::SaveBufferFile(std::string pathFile, const char *bufferFile, uint32_t
 
 	if(fd != -1)
 	{
-		Info(TAG "Writing: %s", pathFile.c_str());
+		//Info(TAG "Writing: %s", pathFile.c_str());
 
 		int escrito = write(fd, bufferFile, sizeBufferFile);
 
@@ -106,7 +106,7 @@ void File::SaveBufferFile(std::string pathFile, const char *bufferFile, uint32_t
 	}
 	else
 	{
-		Info(TAG "File do not exist: %s", pathFile.c_str());
+		//Info(TAG "File do not exist: %s", pathFile.c_str());
 
 		if( errno == ENOSPC)
 		{
@@ -129,7 +129,7 @@ bool File::GetBufferFile(std::string pathFile, char *bufferFile, uint32_t& sizeB
 
 	if(fd != -1)
 	{
-		Info(TAG "Reading %s", pathFile.c_str());
+		//Info(TAG "Reading %s", pathFile.c_str());
 
 		fstat(fd, &st);
 
@@ -158,7 +158,7 @@ uint32_t File::GetSizeFile(uint32_t veioid, std::string pathFile)
 
 	if(fd != -1)
 	{
-		Info(TAG "Get file size: %s", pathFile.c_str());
+		//Info(TAG "Get file size: %s", pathFile.c_str());
 
 		fstat(fd, &st);
 
@@ -174,7 +174,7 @@ uint32_t File::GetSizeFile(uint32_t veioid, std::string pathFile)
 
 void File::RenameFile(std::string pathFileOld, std::string pathFileNew)
 {
-	Info(TAG "Rename file: %s to %s", pathFileOld.c_str(), pathFileNew.c_str());
+	//Info(TAG "Rename file: %s to %s", pathFileOld.c_str(), pathFileNew.c_str());
 
 	int fd = renameat(this->dirFd, pathFileOld.c_str(), this->dirFd, pathFileNew.c_str());
 
@@ -189,7 +189,7 @@ void File::DelFile(std::string pathFile)
 	std::stringstream del;
 	del << this->path << "/" << pathFile;
 
-	Info(TAG "Removing file: %s", del.str().c_str());
+	//Info(TAG "Removing file: %s", del.str().c_str());
 	remove(del.str().c_str());
 }
 

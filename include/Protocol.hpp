@@ -131,6 +131,8 @@ class Protocol
 		 */
 		uint32_t CreateClient(string clientName);
 
+		uint32_t CreateEquipmentImei();
+
 		/** \brief CreateEquipment -.
 		 *
 		 * \param projectId uint32_t

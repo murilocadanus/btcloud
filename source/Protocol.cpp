@@ -35,6 +35,11 @@ Protocol::Protocol()
 
 Protocol::~Protocol()
 {
+	pData = nullptr;
+	pTelemetry = nullptr;
+	pPosition = nullptr;
+	pEventFlag = nullptr;
+	pOdoVel = nullptr;
 }
 
 void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo)
@@ -227,46 +232,37 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	// Create a position for this HSYNC if it has a position
 	bool isGPS = (unsigned char) hsync.at(1) >= 0xA0;
 
-	if(isGPS)
-	{
-		/*const char *controlByte = hsync.substr(1, 1).c_str();
-		BTCloud::Util::Output *p = (BTCloud::Util::Output*) controlByte;
+	double lat = isGPS ? BTCloud::Util::ParseLatitude(hsync.substr(2, 3), 1) : 0.0;
+	double lon = isGPS ? BTCloud::Util::ParseLongitude(hsync.substr(5, 3), 1, 0) : 0.0;
 
-		double lat = BTCloud::Util::ParseLatitude(hsync.substr(2, 3), p->saida2);
-		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), p->saida1, p->saida0);*/
+	Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
-		double lat = BTCloud::Util::ParseLatitude(hsync.substr(2, 3), 1);
-		double lon = BTCloud::Util::ParseLongitude(hsync.substr(5, 3), 1, 0);
+	// Setting data to position package
+	pPosition->lat = lat;
+	pPosition->lon = lon;
 
-		Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
+	pPosition->dateTime = lapso.timestamp;
+	pPosition->dateArrive = pTimer->GetCurrentTime();
+	pPosition->inf_motorista.id = lapso.ibtMotorista;
 
-		// Setting data to position package
-		pPosition->lat = lat;
-		pPosition->lon = lon;
-		pPosition->dateTime = lapso.timestamp;
-		pPosition->dateArrive = pTimer->GetCurrentTime();
-		pPosition->inf_motorista.id = lapso.ibtMotorista;
+	if(lapso.rpm > 0 && lapso.velocidade > 0)
+		pEventFlag->ignition = 1;
+	else
+		pEventFlag->ignition = 0;
 
-		if(lapso.rpm > 0 && lapso.velocidade > 0)
-			pEventFlag->ignition = 1;
-		else
-			pEventFlag->ignition = 0;
+	pOdoVel->velocity = lapso.velocidade;
 
-		pOdoVel->velocity = lapso.velocidade;
+	Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
 
+	// Send position package to queue in final protobuf format
+	//bluetecPacote.SerializeToString(&serializado);
+	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
-		Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
+	// Save JSON at MongoDB
+	CreatePosition(false, false);
 
-		// Send position package to queue in final protobuf format
-		//bluetecPacote.SerializeToString(&serializado);
-		BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
-
-		// Save JSON at MongoDB
-		CreatePosition(false, false);
-
-		// Reset entity
-		cPackage.Clear();
-	}
+	// Reset entity
+	cPackage.Clear();
 }
 
 void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
@@ -422,8 +418,8 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	std::string city = "";
 	std::string province = "";
 	int velocity = pTelemetry->velocity;
-	double lat2 = pPosition->lat;
-	double long2 = pPosition->lon;
+	double lat2 = round(pPosition->lat * 1000000000000.0) / 1000000000000.0;
+	double long2 = round(pPosition->lon * 1000000000000.0) / 1000000000000.0;
 	std::string number = "";
 	std::string country = "";
 	std::string velocityStreet = "";
@@ -475,22 +471,26 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 		// Insert json data at posicao
 		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataPosJSON);
 
-		// Get last position
-		uint64_t lastPositionDate = GetLastPosition(dataCache.veioId, datePosition);
+		// Verify if has a valid position
+		if(abs(long2) != 0 && abs(lat2) != 0)
+		{
+			// Get last position
+			uint64_t lastPositionDate = GetLastPosition(vehicle, datePosition);
 
-		// Insert/Update data at ultima_posicao
-		if(lastPositionDate == 0)
-		{
-			Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
-			pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataPosJSON);
+			// Insert/Update data at ultima_posicao
+			if(lastPositionDate == 0)
+			{
+				Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
+				pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataPosJSON);
+			}
+			else if(lastPositionDate < datePosition)
+			{
+				Dbg(TAG "Updating position at mongodb collection ultima_posicao");
+				UpdateLastPosition(vehicle, datePosition, dateArrival);
+			}
+			else
+				Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
 		}
-		else if(lastPositionDate < datePosition)
-		{
-			Dbg(TAG "Updating position at mongodb collection ultima_posicao");
-			UpdateLastPosition(dataCache.veioId, datePosition, dateArrival);
-		}
-		else
-			Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
 	}
 	catch(std::exception &e)
 	{
@@ -530,6 +530,9 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 {
 	mongo::Query query = QUERY("veiculo" << vehicleId);
 
+	double lat2 = round(pPosition->lat * 1000000000000.0) / 1000000000000.0;
+	double long2 = round(pPosition->lon * 1000000000000.0) / 1000000000000.0;
+
 	// Create update query
 	mongo::BSONObj querySet = BSON("$set" << BSON(
 										"data_posicao" << mongo::Date_t(datePosition) <<
@@ -537,7 +540,7 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 										"motorista_ibutton" << pPosition->inf_motorista.id <<
 										"velocidade" << pTelemetry->velocity <<
 										"coordenadas" << BSON("Type" << "Point" <<
-															"coordinates" << BSON_ARRAY(pPosition->lon << pPosition->lat))
+															"coordinates" << BSON_ARRAY(long2 << lat2))
 										)
 							);
 
@@ -946,6 +949,9 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 
 void Protocol::GetClientData(DataCache &retorno, std::string chave)
 {
+	// Init mysql client
+	pMysqlConnector->Initialize();
+
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
@@ -996,13 +1002,16 @@ void Protocol::GetClientData(DataCache &retorno, std::string chave)
 
 uint32_t Protocol::GetClient(std::string clientName)
 {
-	uint32_t clientId = 0;
+	// Init mysql client
+	pMysqlConnector->Initialize();
 
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
 							 , pConfiguration->GetMySQLPassword()
 							 , pConfiguration->GetMySQLScheme());
+
+	uint32_t clientId = 0;
 
 	string query("");
 	query.append("SELECT id FROM clientes WHERE clinome = '").append(clientName).append("'");
@@ -1035,6 +1044,9 @@ uint32_t Protocol::GetClient(std::string clientName)
 
 uint32_t Protocol::CreateClient(std::string clientName)
 {
+	// Init mysql client
+	pMysqlConnector->Initialize();
+
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
@@ -1060,8 +1072,52 @@ uint32_t Protocol::CreateClient(std::string clientName)
 	return id;
 }
 
+uint32_t Protocol::CreateEquipmentImei()
+{
+	// Init mysql client
+	pMysqlConnector->Initialize();
+
+	// Connect to mysql
+	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
+							 , pConfiguration->GetMySQLUser()
+							 , pConfiguration->GetMySQLPassword()
+							 , pConfiguration->GetMySQLScheme());
+
+	uint32_t id = 0;
+
+	string query("");
+	query.append("SELECT (RAND() * 9999999999999) + 99");
+	Dbg(TAG "Query: %s", query.c_str());
+
+	// Get vehicle id
+	if(pMysqlConnector->Execute(query))
+	{
+		Dbg(TAG "Query executed");
+		auto mysqlResult = pMysqlConnector->Result();
+		if(mysqlResult)
+		{
+			Dbg(TAG "Query resulted");
+
+			auto mysqlRow = pMysqlConnector->FetchRow(mysqlResult);
+			if(mysqlRow)
+			{
+				id = atoi(mysqlRow[0]);
+				pMysqlConnector->FreeResult(mysqlResult);
+			}
+		}
+	}
+
+	// Diconnect from mysql
+	pMysqlConnector->Disconnect();
+
+	return id;
+}
+
 uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 {
+	// Init mysql client
+	pMysqlConnector->Initialize();
+
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
 							 , pConfiguration->GetMySQLUser()
@@ -1069,10 +1125,11 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 							 , pConfiguration->GetMySQLScheme());
 
 	string query("");
-	query.append("INSERT INTO equipamentos SET equip_id = default")
-			.append(", projetos_proj_id = ").append(std::to_string(projectId))
-			.append(", equip_imei = ").append(std::to_string(equipIMei))
-			.append(", equip_insert_datetime = CURRENT_TIMESTAMP");
+
+	query.append("INSERT INTO equipamentos SET ")
+			.append("projetos_proj_id = ").append(std::to_string(projectId))
+			.append(", equip_imei = ").append(std::to_string(equipIMei));
+
 	Dbg(TAG "Query: %s", query.c_str());
 
 	bool exec = pMysqlConnector->Execute(query);
@@ -1081,7 +1138,30 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 	int id = 0;
 
 	// return inserted registry id
-	if(exec) id = pMysqlConnector->InsertedID();
+	if(exec)
+	{
+		string query("");
+		query.append("SELECT equip_id FROM equipamentos WHERE equip_imei = ").append(std::to_string(equipIMei));
+		Dbg(TAG "Query: %s", query.c_str());
+
+		// Get equip id
+		if(pMysqlConnector->Execute(query))
+		{
+			Dbg(TAG "Query executed");
+			auto mysqlResult = pMysqlConnector->Result();
+			if(mysqlResult)
+			{
+				Dbg(TAG "Query resulted");
+
+				auto mysqlRow = pMysqlConnector->FetchRow(mysqlResult);
+				if(mysqlRow)
+				{
+					id = atoi(mysqlRow[0]);
+					pMysqlConnector->FreeResult(mysqlResult);
+				}
+			}
+		}
+	}
 
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
@@ -1093,12 +1173,6 @@ uint32_t Protocol::CreateEquipment(uint32_t projectId, uint32_t equipIMei)
 uint32_t Protocol::GetVehicle(uint32_t equipId)
 {
 	uint32_t vehicleId = 0;
-
-	// Connect to mysql
-	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
-							 , pConfiguration->GetMySQLUser()
-							 , pConfiguration->GetMySQLPassword()
-							 , pConfiguration->GetMySQLScheme());
 
 	string query("");
 	query.append("SELECT veioid FROM veiculos WHERE vei_equoid = ").append(std::to_string(equipId));
@@ -1122,17 +1196,15 @@ uint32_t Protocol::GetVehicle(uint32_t equipId)
 		}
 	}
 
-	// Diconnect from mysql
-	pMysqlConnector->Disconnect();
-
 	Dbg(TAG "ClientID: %d", vehicleId);
 	return vehicleId;
 }
 
 uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::string plate)
 {
-	int vehicleId = GetVehicle(equipId);
-	int id = 0;
+
+	// Init mysql client
+	pMysqlConnector->Initialize();
 
 	// Connect to mysql
 	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
@@ -1140,23 +1212,28 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 							 , pConfiguration->GetMySQLPassword()
 							 , pConfiguration->GetMySQLScheme());
 
+	//int vehicleId = GetVehicle(equipId);
+	int id = 0;
+
 	string query("");
 
 	// FIX: Deleting and then inserting due update problem where it not affect row
-	query.append("DELETE FROM veiculos WHERE veioid = ").append(std::to_string(vehicleId));
+	/*query.append("DELETE FROM veiculos WHERE veioid = ").append(std::to_string(vehicleId));
 	Dbg(TAG "Delete Query: %s", query.c_str());
-	pMysqlConnector->Execute(query);
 
-	/*query.append("UPDATE veiculos SET ")
+	bool exec = pMysqlConnector->Execute(query);
+	Dbg(TAG "Delete query executed: %d", exec);
+
+	query.append("UPDATE veiculos SET ")
 			.append("vei_clioid = ").append(std::to_string(clientId))
 			.append(", vei_placa = '").append(plate).append("'")
 			.append(", vei_alias = '").append(plate).append("'")
-			.append(" WHERE veioid = ").append(std::to_string(vehicleId));*/
+			.append(" WHERE veioid = ").append(std::to_string(vehicleId));
 
-	query.clear();
+	query.clear();*/
 
-	query.append("INSERT INTO veiculos SET veioid = default")
-			.append(", vei_clioid = ").append(std::to_string(clientId))
+	query.append("INSERT INTO veiculos SET ")
+			.append("vei_clioid = ").append(std::to_string(clientId))
 			.append(", vei_equoid = ").append(std::to_string(equipId))
 			.append(", vei_placa = '").append(plate).append("'");
 
@@ -1166,7 +1243,7 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 	Dbg(TAG "Query executed: %d", exec);
 
 	// return inserted registry id
-	if(exec) id = pMysqlConnector->InsertedID();
+	if(exec) id = GetVehicle(equipId);
 
 	// Diconnect from mysql
 	pMysqlConnector->Disconnect();
@@ -1181,8 +1258,8 @@ uint32_t Protocol::CreateVehicle(uint32_t clientId, uint32_t equipId, std::strin
 void Protocol::FillDataContract(std::string clientName, std::string plate, DataCache &retorno)
 {
 	// Use a local cache to avoid access mysql db
-	if(retorno.plate.compare(plate) != 0)
-	{
+	/*if(retorno.plate.compare(plate) != 0)
+	{*/
 		retorno.veioId = 0;
 		retorno.esn = atoi(plate.c_str());
 
@@ -1200,7 +1277,7 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 
 			// Generate equipment imei
 			srand(time(NULL));
-			int imei = rand();
+			uint32_t imei = CreateEquipmentImei();
 
 			// FIX: Verify why 0 is returned from pConfiguration
 			uint32_t equipId = CreateEquipment(pConfiguration->GetProjectId(), imei);
@@ -1212,7 +1289,7 @@ void Protocol::FillDataContract(std::string clientName, std::string plate, DataC
 			retorno.id = equipId;
 			retorno.clientName = clientName;
 		}
-	}
+	//}
 }
 
 void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbClient)

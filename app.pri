@@ -4,19 +4,23 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 INCLUDEPATH +=	include/ \
-				../libi9/include
+				../libi9/include \
+				/usr/include/apr-1.0
 
 CONFIG(debug, debug|release) {
 	TARGET = $${TARGET}-debug
+	LIBS	+= -L ../libi9/lib -lI9_d
+	DEFINES += DEBUG
 }
 
 CONFIG(release, debug|release) {
 	TARGET = $${TARGET}
+	LIBS	+= -L ../libi9/lib -lI9
 }
 
 unix {
 
-	LIBS	+= -L ../libi9/lib -lI9 -pthread -lmongoclient -lcurl -lyajl -lboost_system -lboost_thread -lmysqlclient
+	LIBS	+= -pthread -lmongoclient -lcurl -lyajl -lboost_system -lboost_thread -lactivemq-cpp -lmysqlclient
 
 	#Configs
 	APP_CONFIG_FILES.files = $$files($${PWD}/resources/*.*)
