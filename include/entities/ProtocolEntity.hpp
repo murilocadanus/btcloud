@@ -203,10 +203,25 @@ namespace BTCloud { namespace Entities {
 	 */
 	struct Package
 	{
+		Package()
+		{
+			data = Data();
+			telemetry = Telemetry();
+		}
+
+		~Package()
+		{
+		}
+
+		void Clear()
+		{
+			data.position.lat = 0.0;
+			data.position.lon = 0.0;
+		}
+
 		Data data;
 		Telemetry telemetry;
 
-		void Clear(){}
 	};
 
 }} // namespace

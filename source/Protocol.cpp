@@ -35,6 +35,11 @@ Protocol::Protocol()
 
 Protocol::~Protocol()
 {
+	pData = nullptr;
+	pTelemetry = nullptr;
+	pPosition = nullptr;
+	pEventFlag = nullptr;
+	pOdoVel = nullptr;
 }
 
 void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned int ponteiroFim, unsigned int arquivo)
@@ -413,8 +418,8 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	std::string city = "";
 	std::string province = "";
 	int velocity = pTelemetry->velocity;
-	double lat2 = pPosition->lat;
-	double long2 = pPosition->lon;
+	double lat2 = round(pPosition->lat * 1000000000000.0) / 1000000000000.0;
+	double long2 = round(pPosition->lon * 1000000000000.0) / 1000000000000.0;
 	std::string number = "";
 	std::string country = "";
 	std::string velocityStreet = "";
@@ -525,6 +530,9 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 {
 	mongo::Query query = QUERY("veiculo" << vehicleId);
 
+	double lat2 = round(pPosition->lat * 1000000000000.0) / 1000000000000.0;
+	double long2 = round(pPosition->lon * 1000000000000.0) / 1000000000000.0;
+
 	// Create update query
 	mongo::BSONObj querySet = BSON("$set" << BSON(
 										"data_posicao" << mongo::Date_t(datePosition) <<
@@ -532,7 +540,7 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 										"motorista_ibutton" << pPosition->inf_motorista.id <<
 										"velocidade" << pTelemetry->velocity <<
 										"coordenadas" << BSON("Type" << "Point" <<
-															"coordinates" << BSON_ARRAY(pPosition->lon << pPosition->lat))
+															"coordinates" << BSON_ARRAY(long2 << lat2))
 										)
 							);
 
