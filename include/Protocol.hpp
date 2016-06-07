@@ -90,7 +90,7 @@ class Protocol
 		 *
 		 * \return void
 		 */
-		void CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased);
+		void CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd);
 
 		/** \brief GetLastPosition -.
 		 *
@@ -174,7 +174,7 @@ class Protocol
 		 * \param arquivo unsigned int
 		 * \return void
 		 */
-		void ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo);
+		void ParseA3A5A7(string a3a5a7);
 
 		/** \brief ParseHSYNS -.
 		 *

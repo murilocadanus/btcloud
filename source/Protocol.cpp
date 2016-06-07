@@ -259,58 +259,73 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 	// Save JSON at MongoDB
-	CreatePosition(false, false);
+	CreatePosition(false, false, false);
 
 	// Reset entity
 	cPackage.Clear();
 }
 
-void Protocol::ParseA3A5A7(unsigned int ponteiroIni, unsigned int arquivo)
+void Protocol::ParseA3A5A7(string a3a5a7)
 {
-	// Search for route persisted with start cursor = 1 and remove it
+	struct BTCloud::Util::Lapse lapso;
 	Bluetec::HeaderDataFile header;
-	char tBuffer[500000];
-	uint32_t tSize=0;
+	string pLapso;
 
-	Dbg(TAG "Searching the start point in this route");
+	lapso.idTrecho = cFileManager.GetNextIdRoute();
+	lapso.timestamp = 0;
+	lapso.velocidade = 0;
+	lapso.rpm = 0;
+	lapso.odometro = 0;
+	lapso.horimetro = 0;
+	lapso.ed1 = 0;
+	lapso.ed2 = 0;
+	lapso.ed3 = 0;
+	lapso.ed4 = 0;
+	lapso.ed5 = 0;
+	lapso.ed6 = 0;
+	lapso.acelx = 0;
+	lapso.acely = 0;
+	lapso.an1 = 0;
+	lapso.an2 = 0;
+	lapso.an3 = 0;
+	lapso.an4 = 0;
 
-	// Case something matches with the start of this route
-	if(cFileManager.getBufferFile(dataCache.veioId, ponteiroIni - 1, arquivo, tBuffer, tSize, header) &&
-			header.endPointer == ponteiroIni - 1 && header.file == arquivo)
-	{
-		Dbg(TAG "This route has a start point");
+	std::string data = a3a5a7.substr(4, 6);
 
-		switch(header.dataType)
-		{
-			case Bluetec::enumDataType::HSYNS_DADOS:
-				Dbg(TAG "Route completed, removing from temp memory");
-				cFileManager.DelFile(dataCache.veioId, header.headerFile);
-			break;
+	struct tm *dataHora;
+	time_t currentTime = 0;
+	time(&currentTime);
+	dataHora = localtime(&currentTime);
 
-			case Bluetec::enumDataType::DADOS:
-				Dbg(TAG "Route incomplete, increasing end route point");
+	dataHora->tm_year = (2000 + BTCloud::Util::ParseBCDDecimal(data.at(0))); //'YY'YYMMDDHHMMSS + YY'YY'MMDDHHMMSS
+	dataHora->tm_mon = BTCloud::Util::ParseBCDDecimal(data.at(1)); //YYYY'MM'DDHHMMSS
+	dataHora->tm_mday = BTCloud::Util::ParseBCDDecimal(data.at(2)); //YYYYMM'DD'HHMMSS
+	dataHora->tm_hour = BTCloud::Util::ParseBCDDecimal(data.at(3)); //YYYYMMDD'HH'MMSS
+	dataHora->tm_min = BTCloud::Util::ParseBCDDecimal(data.at(4)); //YYYYMMDDHH'MM'SS
+	dataHora->tm_sec = BTCloud::Util::ParseBCDDecimal(data.at(5)); //YYYYMMDDHHMM'SS'
 
-				// Remove this temp file to overwrite it
-				cFileManager.DelFile(dataCache.veioId, header.headerFile);
+	dataHora->tm_mon -= 1;
+	dataHora->tm_year -= 1900;
 
-				// Update the data type
-				header.dataType = Bluetec::enumDataType::DADOS_FINAL;
+	lapso.timestamp = mktime(dataHora);
 
-				// Save it
-				cFileManager.SaveBufferFile(dataCache.veioId, tBuffer, tSize, header);
-			break;
-		}
-	}
-	else
-	{
-		// Case this does not need to be saved temporarily
-		header.file = arquivo;
-		header.beginPointer = ponteiroIni;
-		header.dataType = Bluetec::enumDataType::FINAL;
+	lapso.ibtMotorista = "";
+	pPosition->dateTime = lapso.timestamp;
+	pPosition->dateArrive = pTimer->GetCurrentTime();
+	pPosition->inf_motorista.id = lapso.ibtMotorista;
 
-		Dbg(TAG "Save buffer file header data type");
-		cFileManager.SaveBufferFile(dataCache.veioId, tBuffer, (uint32_t)0, header);
-	}
+	pEventFlag->ignition = 0;
+	pOdoVel->velocity = lapso.velocidade;
+
+	// Send position package to queue in final protobuf format
+	//bluetecPacote.SerializeToString(&serializado);
+	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
+
+	// Save JSON at MongoDB
+	CreatePosition(false, false, true);
+
+	// Reset entity
+	cPackage.Clear();
 }
 
 void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponteiroFim)
@@ -395,7 +410,7 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
 }
 
-void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased)
+void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd)
 {
 	// Get all values from bluetec package
 	int idEquipment = dataCache.id;
@@ -418,8 +433,8 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	std::string city = "";
 	std::string province = "";
 	int velocity = pTelemetry->velocity;
-	double lat2 = round(pPosition->lat * 1000000000000.0) / 1000000000000.0;
-	double long2 = round(pPosition->lon * 1000000000000.0) / 1000000000000.0;
+	double lat2 = /*round(*/pPosition->lat /** 1000000000000.0) / 1000000000000.0*/;
+	double long2 = /*round(*/pPosition->lon /** 1000000000000.0) / 1000000000000.0*/;
 	std::string number = "";
 	std::string country = "";
 	std::string velocityStreet = "";
@@ -455,6 +470,7 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 				"saidas" << BSON("saida0" << false << "saida1" << false << "saida2" << false << "saida3" << false <<
 								 "saida4" << false << "saida5" << false << "saida6" << false << "saida7" << false) <<
 				"odometro_adicionado" << isOdometerIncreased << "horimetro_adicionado" << isHourmeterIncreased <<
+				"inicio_rota" << ignition << "fim_rota" << routeEnd <<
 				"DadoLivre" << BSON(
 					"Analogico1" << analogic1 << "Analogico2" << analogic2 << "Analogico3" << analogic3 <<
 					"Analogico4" << analogic4 << "Horimetro" << horimeter << "AcelerometroX" << accelerometerX <<
@@ -530,8 +546,8 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 {
 	mongo::Query query = QUERY("veiculo" << vehicleId);
 
-	double lat2 = round(pPosition->lat * 1000000000000.0) / 1000000000000.0;
-	double long2 = round(pPosition->lon * 1000000000000.0) / 1000000000000.0;
+	double lat2 = /*round(*/pPosition->lat /** 1000000000000.0) / 1000000000000.0*/;
+	double long2 = /*round(*/pPosition->lon /** 1000000000000.0) / 1000000000000.0*/;
 
 	// Create update query
 	mongo::BSONObj querySet = BSON("$set" << BSON(
@@ -697,6 +713,11 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		header.beginPointer = hsynsHeader.beginPointer;
 		header.dataType = hsynsHeader.dataType;
 		header.timestamp = hsynsHeader.timestamp;
+
+		if(isFinalRoute)
+		{
+			Dbg("%d", isFinalRoute);
+		}
 
 		ParseLapse(lapso, dados, hfull, index, fim);
 
@@ -925,7 +946,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 				Dbg(TAG "Position found, sending package with %d lapses of %d bytes", sizePacote / iLapsoSize, iLapsoSize);
 
 				// Save JSON at MongoDB
-				CreatePosition(isOdometerIncreased, isHourmeterIncreased);
+				CreatePosition(isOdometerIncreased, isHourmeterIncreased, false);
 
 				// Reset entity
 				cPackage.Clear();
@@ -1536,7 +1557,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					Dbg(TAG "Closing the route of final point %d", i - 1);
 
 					// Parse data
-					//ParseA3A5A7(ponteiroIni + i, arquivo, 0);
+					ParseA3A5A7(sbt4.substr(inicio, lFimTrecho));
 
 					i += lFimTrecho + 1;
 					inicio = i;

@@ -215,8 +215,8 @@ namespace BTCloud { namespace Entities {
 
 		void Clear()
 		{
-			data.position.lat = 0.0;
-			data.position.lon = 0.0;
+			//data.position.lat = 0.0;
+			//data.position.lon = 0.0;
 		}
 
 		Data data;
