@@ -189,7 +189,7 @@ tm* ParseTimeDate(string data)
 	time(&currentTime);
 	dataHora = localtime(&currentTime);
 
-	dataHora->tm_year = (ParseBCDDecimal(data.at(0)) * 100) + ParseBCDDecimal(data.at(1)); //'YY'YYMMDDHHMMSS + YY'YY'MMDDHHMMSS
+	dataHora->tm_year = 2000 + ParseBCDDecimal(data.at(1)); //'YY'YYMMDDHHMMSS + YY'YY'MMDDHHMMSS
 	dataHora->tm_mon = ParseBCDDecimal(data.at(2)); //YYYY'MM'DDHHMMSS
 	dataHora->tm_mday = ParseBCDDecimal(data.at(3)); //YYYYMM'DD'HHMMSS
 	dataHora->tm_hour = ParseBCDDecimal(data.at(4)); //YYYYMMDD'HH'MMSS
