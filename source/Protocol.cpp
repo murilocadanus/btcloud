@@ -245,7 +245,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	pPosition->dateArrive = pTimer->GetCurrentTime();
 	pPosition->inf_motorista.id = lapso.ibtMotorista;
 
-	if(lapso.rpm > 0 && lapso.velocidade > 0)
+	if(lapso.rpm > 0)
 		pEventFlag->ignition = 1;
 	else
 		pEventFlag->ignition = 0;
@@ -259,7 +259,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 	// Save JSON at MongoDB
-	CreatePosition(false, false, false);
+	CreatePosition(false, false, false, false);
 
 	// Reset entity
 	cPackage.Clear();
@@ -322,7 +322,7 @@ void Protocol::ParseA3A5A7(string a3a5a7)
 	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 	// Save JSON at MongoDB
-	CreatePosition(false, false, true);
+	CreatePosition(false, false, true, false);
 
 	// Reset entity
 	cPackage.Clear();
@@ -410,7 +410,7 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
 }
 
-void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd)
+void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd, bool hasVelocity)
 {
 	// Get all values from bluetec package
 	int idEquipment = dataCache.id;
@@ -432,7 +432,6 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	std::string neighborhood = "";
 	std::string city = "";
 	std::string province = "";
-	int velocity = pTelemetry->velocity;
 	double lat2 = /*round(*/pPosition->lat /** 1000000000000.0) / 1000000000000.0*/;
 	double long2 = /*round(*/pPosition->lon /** 1000000000000.0) / 1000000000000.0*/;
 	std::string number = "";
@@ -441,6 +440,8 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	bool gps = true;
 	std::string driverId = pPosition->inf_motorista.id;
 
+	int velocity = pTelemetry->velocity;
+	int32_t rpm = pTelemetry->rpm;
 	int32_t analogic1 = pTelemetry->an1;
 	int32_t analogic2 = pTelemetry->an2;
 	int32_t analogic3 = pTelemetry->an3;
@@ -453,39 +454,56 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	double_t accelerometerX = pTelemetry->acelX;
 	double_t accelerometerY = pTelemetry->acelY;
 	double_t hodometer = pTelemetry->odometer;
-	int32_t rpm = pTelemetry->rpm;
 	bool ignition = pEventFlag->ignition;
 	bool breaks = pTelemetry->ed8;
 
 	// Create BSON to be persisted
-	mongo::BSONObj dataPosJSON = BSON(
-				"id_equipamento" << idEquipment << "veiculo" << vehicle << "placa" << plate << "cliente" << client <<
-				"data_posicao" << mongo::Date_t(datePosition) << "data_chegada" << mongo::Date_t(dateArrival) <<
-				"velocidade" << velocity <<	"endereco" << address << "bairro" << neighborhood << "municipio" << city
-				<< "estado" << province <<
-				"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2)) << "numero" << number <<
-				"pais" << country << "velocidade_via" << velocityStreet << "gps" << gps << "motorista_ibutton" << driverId <<
-				"entradas" << BSON("ignicao" << ignition << "entrada1" << false << "entrada2" << false << "entrada3" << false <<
-					"entrada4" << false << "entrada5" << false << "entrada6" << false << "entrada7" << false) <<
-				"saidas" << BSON("saida0" << false << "saida1" << false << "saida2" << false << "saida3" << false <<
-								 "saida4" << false << "saida5" << false << "saida6" << false << "saida7" << false) <<
-				"odometro_adicionado" << isOdometerIncreased << "horimetro_adicionado" << isHourmeterIncreased <<
-				"inicio_rota" << ignition << "fim_rota" << routeEnd <<
-				"DadoLivre" << BSON(
-					"Analogico1" << analogic1 << "Analogico2" << analogic2 << "Analogico3" << analogic3 <<
-					"Analogico4" << analogic4 << "Horimetro" << horimeter << "AcelerometroX" << accelerometerX <<
-					"Digital1" << digital1 << "Digital2" << digital2 << "Digital3" << digital3 <<
-					"Digital4" << digital4 << "AcelerometroY" << accelerometerY << "Hodometro" << hodometer <<
-					"Rpm" << rpm << "Freio" << breaks
-					)
-				);
+	mongo::BSONObjBuilder dataJSON;
 
-	Log(TAG "%s %s", dataPosJSON.toString().c_str(), pConfiguration->GetMongoDBCollections().at(0).c_str());
+	dataJSON << "id_equipamento" << idEquipment << "veiculo" << vehicle << "placa" << plate << "cliente" << client <<
+		"data_posicao" << mongo::Date_t(datePosition) << "data_chegada" << mongo::Date_t(dateArrival) <<
+		"endereco" << address << "bairro" << neighborhood << "municipio" << city << "numero" << number <<
+		"estado" << province;
+
+	if(hasVelocity) dataJSON << "velocidade" << velocity;
+
+	if(abs(long2) != 0 && abs(lat2) != 0)
+		dataJSON.appendElements(BSON("coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2))));
+
+	dataJSON << "pais" << country << "velocidade_via" << velocityStreet << "gps" << gps << "motorista_ibutton" << driverId;
+
+	dataJSON.appendElements(BSON("entradas" <<
+								BSON("ignicao" << ignition << "entrada1" << false <<
+									"entrada2" << false << "entrada3" << false << "entrada4" << false <<
+									"entrada5" << false << "entrada6" << false << "entrada7" << false)
+								 )
+							);
+
+	dataJSON.appendElements(BSON("saidas" <<
+								BSON("saida0" << false << "saida1" << false << "saida2" << false << "saida3" << false <<
+									 "saida4" << false << "saida5" << false << "saida6" << false << "saida7" << false)
+								 )
+							);
+
+	dataJSON << "odometro_adicionado" << isOdometerIncreased << "horimetro_adicionado" << isHourmeterIncreased;
+
+	dataJSON << "inicio_rota" << ignition << "fim_rota" << routeEnd;
+
+	dataJSON.appendElements(BSON("DadoLivre" <<
+								BSON("Analogico1" << analogic1 << "Analogico2" << analogic2 << "Analogico3" << analogic3 <<
+									"Analogico4" << analogic4 << "Horimetro" << horimeter << "AcelerometroX" << accelerometerX <<
+									"Digital1" << digital1 << "Digital2" << digital2 << "Digital3" << digital3 <<
+									"Digital4" << digital4 << "AcelerometroY" << accelerometerY << "Hodometro" << hodometer <<
+									"Rpm" << rpm << "Freio" << breaks)
+								 )
+							);
+
+	Log(TAG "%s %s", dataJSON.obj().toString().c_str(), pConfiguration->GetMongoDBCollections().at(0).c_str());
 
 	try
 	{
 		// Insert json data at posicao
-		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataPosJSON);
+		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataJSON.obj());
 
 		// Verify if has a valid position
 		if(abs(long2) != 0 && abs(lat2) != 0)
@@ -497,7 +515,7 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 			if(lastPositionDate == 0)
 			{
 				Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
-				pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataPosJSON);
+				pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataJSON.obj());
 			}
 			else if(lastPositionDate < datePosition)
 			{
@@ -946,7 +964,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 				Dbg(TAG "Position found, sending package with %d lapses of %d bytes", sizePacote / iLapsoSize, iLapsoSize);
 
 				// Save JSON at MongoDB
-				CreatePosition(isOdometerIncreased, isHourmeterIncreased, false);
+				CreatePosition(isOdometerIncreased, isHourmeterIncreased, false, controle->saida5);
 
 				// Reset entity
 				cPackage.Clear();
