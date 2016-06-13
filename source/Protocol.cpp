@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <util/Log.hpp>
 #include "mongo/client/dbclient.h" // for the driver
+#include "mongo/util/assert_util.h"
 #include "Configuration.hpp"
 #include <api/mysql/MySQLConnector.hpp>
 #include <System.hpp>
@@ -498,12 +499,14 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 								 )
 							);
 
-	Log(TAG "%s %s", dataJSON.obj().toString().c_str(), pConfiguration->GetMongoDBCollections().at(0).c_str());
+	mongo::BSONObj dataJSONObj = dataJSON.obj();
+
+	Log(TAG "%s %s", dataJSONObj.toString().c_str(), pConfiguration->GetMongoDBCollections().at(0).c_str());
 
 	try
 	{
 		// Insert json data at posicao
-		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataJSON.obj());
+		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataJSONObj);
 
 		// Verify if has a valid position
 		if(abs(long2) != 0 && abs(lat2) != 0)
@@ -526,6 +529,12 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 				Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
 		}
 	}
+	catch (mongo::DBException &e)
+	{
+		// duplicate key error
+		string e = pDBClientConnection->getLastError();
+		Error(TAG "Error on insert/update data at mongo: %s", e.c_str());
+	}
 	catch(std::exception &e)
 	{
 		Error(TAG "Error on insert/update data at mongo: %s", e.what());
@@ -538,7 +547,7 @@ uint64_t Protocol::GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate
 	if(iLastPositionDate == lastPositionDate && iLastPositionVehicle == vehicleId)
 		return iLastPositionDate;
 
-	mongo::Query query = QUERY("veiculo" << vehicleId);
+	mongo::Query query = MONGO_QUERY("veiculo" << vehicleId);
 
 	Dbg(TAG "Has last position %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), query.toString().c_str());
 
@@ -562,7 +571,7 @@ uint64_t Protocol::GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate
 
 void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64_t dateArrival)
 {
-	mongo::Query query = QUERY("veiculo" << vehicleId);
+	mongo::Query query = MONGO_QUERY("veiculo" << vehicleId);
 
 	double lat2 = /*round(*/pPosition->lat /** 1000000000000.0) / 1000000000000.0*/;
 	double long2 = /*round(*/pPosition->lon /** 1000000000000.0) / 1000000000000.0*/;

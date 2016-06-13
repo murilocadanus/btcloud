@@ -20,7 +20,9 @@ CONFIG(release, debug|release) {
 
 unix {
 
-	LIBS	+= -pthread -lmongoclient -lcurl -lyajl -lboost_system -lboost_thread -lactivemq-cpp -lmysqlclient
+	LIBS	+= -pthread -lmongoclient -lcurl -lyajl -lboost_system -lboost_thread -lboost_regex-mt -lactivemq-cpp -lmysqlclient -lssl -lcrypto
+	#LIBS	+= -pthread -lmongoclient -lcurl -lyajl -lboost_system -lboost_thread -lboost_regex -lapr-1 -lactivemq-cpp -lmysqlclient -lssl -lcrypto
+
 
 	#Configs
 	APP_CONFIG_FILES.files = $$files($${PWD}/resources/*.*)
