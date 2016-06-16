@@ -260,7 +260,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 	// Save JSON at MongoDB
-	CreatePosition(false, false, false, false);
+	CreatePosition(false, false, false, false, Bluetec::enumDataType::HSYNC);
 
 	// Reset entity
 	cPackage.Clear();
@@ -269,8 +269,6 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 void Protocol::ParseA3A5A7(string a3a5a7)
 {
 	struct BTCloud::Util::Lapse lapso;
-	Bluetec::HeaderDataFile header;
-	string pLapso;
 
 	lapso.idTrecho = cFileManager.GetNextIdRoute();
 	lapso.timestamp = 0;
@@ -314,6 +312,7 @@ void Protocol::ParseA3A5A7(string a3a5a7)
 	pPosition->dateTime = lapso.timestamp;
 	pPosition->dateArrive = pTimer->GetCurrentTime();
 	pPosition->inf_motorista.id = lapso.ibtMotorista;
+	lapso.odometro = BTCloud::Util::ParseHodometer(a3a5a7.substr(10, 3));
 
 	pEventFlag->ignition = 0;
 	pOdoVel->velocity = lapso.velocidade;
@@ -323,7 +322,7 @@ void Protocol::ParseA3A5A7(string a3a5a7)
 	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 	// Save JSON at MongoDB
-	CreatePosition(false, false, true, false);
+	CreatePosition(false, false, true, false, Bluetec::enumDataType::FINAL);
 
 	// Reset entity
 	cPackage.Clear();
@@ -411,7 +410,7 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
 }
 
-void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd, bool hasVelocity)
+void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd, bool hasVelocity, Bluetec::enumDataType type)
 {
 	// Get all values from bluetec package
 	int idEquipment = dataCache.id;
@@ -499,6 +498,23 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 								 )
 							);
 
+	string typeString;
+	switch (type)
+	{
+		case Bluetec::enumDataType::HSYNC:
+			typeString = "HSYNC";
+		break;
+		case Bluetec::enumDataType::FINAL:
+			typeString = "A3A5A7";
+		break;
+
+		default:
+			typeString = "DADOS";
+		break;
+	}
+
+	dataJSON << "tipo" << typeString;
+
 	mongo::BSONObj dataJSONObj = dataJSON.obj();
 
 	Log(TAG "%s %s", dataJSONObj.toString().c_str(), pConfiguration->GetMongoDBCollections().at(0).c_str());
@@ -518,7 +534,7 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 			if(lastPositionDate == 0)
 			{
 				Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
-				pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataJSON.obj());
+				pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataJSONObj);
 			}
 			else if(lastPositionDate < datePosition)
 			{
@@ -973,7 +989,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 				Dbg(TAG "Position found, sending package with %d lapses of %d bytes", sizePacote / iLapsoSize, iLapsoSize);
 
 				// Save JSON at MongoDB
-				CreatePosition(isOdometerIncreased, isHourmeterIncreased, false, controle->saida5);
+				CreatePosition(isOdometerIncreased, isHourmeterIncreased, false, controle->saida5, Bluetec::enumDataType::DADOS);
 
 				// Reset entity
 				cPackage.Clear();
@@ -1584,7 +1600,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					Dbg(TAG "Closing the route of final point %d", i - 1);
 
 					// Parse data
-					ParseA3A5A7(sbt4.substr(inicio, lFimTrecho));
+					ParseA3A5A7(sbt4.substr(inicio, lFimTrecho + 1));
 
 					i += lFimTrecho + 1;
 					inicio = i;
