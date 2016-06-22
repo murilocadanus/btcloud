@@ -180,6 +180,12 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	lapso.an3 = 0;
 	lapso.an4 = 0;
 
+	// Get the current status of bluetec board computer
+	if(hsync.at(0) == '0x60')
+		pEventFlag->block = 0;
+	else if(hsync.at(0) == '0xE0')
+		pEventFlag->block = 1;
+
 	lapso.timestamp = mktime(BTCloud::Util::ParseTimeDate(hsync.substr(8, 7)));
 
 	// Load driver ibutton in bcd
@@ -260,7 +266,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 	// Save JSON at MongoDB
-	CreatePosition(false, false, false, false, Bluetec::enumDataType::HSYNC);
+	CreatePosition(false, false, false, false, true, Bluetec::enumDataType::HSYNC);
 
 	// Reset entity
 	cPackage.Clear();
@@ -322,7 +328,7 @@ void Protocol::ParseA3A5A7(string a3a5a7)
 	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 	// Save JSON at MongoDB
-	CreatePosition(false, false, true, false, Bluetec::enumDataType::FINAL);
+	CreatePosition(false, false, true, false, false, Bluetec::enumDataType::FINAL);
 
 	// Reset entity
 	cPackage.Clear();
@@ -410,7 +416,7 @@ void Protocol::ParseHSYNS(string hsyns, unsigned int arquivo, unsigned int ponte
 	cFileManager.SaveBufferFile(dataCache.veioId, pLapso.c_str(), pLapso.length(), header);
 }
 
-void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd, bool hasVelocity, Bluetec::enumDataType type)
+void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd, bool hasVelocity, bool hasBlock, Bluetec::enumDataType type)
 {
 	// Get all values from bluetec package
 	int idEquipment = dataCache.id;
@@ -456,9 +462,11 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	double_t hodometer = pTelemetry->odometer;
 	bool ignition = pEventFlag->ignition;
 	bool breaks = pTelemetry->ed8;
+	bool block = pEventFlag->block;
 
 	// Create BSON to be persisted
 	mongo::BSONObjBuilder dataJSON;
+	mongo::BSONObjBuilder freeDataJSON;
 
 	dataJSON << "id_equipamento" << idEquipment << "veiculo" << vehicle << "placa" << plate << "cliente" << client <<
 		"data_posicao" << mongo::Date_t(datePosition) << "data_chegada" << mongo::Date_t(dateArrival) <<
@@ -489,14 +497,15 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 
 	dataJSON << "inicio_rota" << ignition << "fim_rota" << routeEnd;
 
-	dataJSON.appendElements(BSON("DadoLivre" <<
-								BSON("Analogico1" << analogic1 << "Analogico2" << analogic2 << "Analogico3" << analogic3 <<
-									"Analogico4" << analogic4 << "Horimetro" << horimeter << "AcelerometroX" << accelerometerX <<
-									"Digital1" << digital1 << "Digital2" << digital2 << "Digital3" << digital3 <<
-									"Digital4" << digital4 << "AcelerometroY" << accelerometerY << "Hodometro" << hodometer <<
-									"Rpm" << rpm << "Freio" << breaks)
-								 )
-							);
+	freeDataJSON << "Analogico1" << analogic1 << "Analogico2" << analogic2 << "Analogico3" << analogic3 <<
+						"Analogico4" << analogic4 << "Horimetro" << horimeter << "AcelerometroX" << accelerometerX <<
+						"Digital1" << digital1 << "Digital2" << digital2 << "Digital3" << digital3 <<
+						"Digital4" << digital4 << "AcelerometroY" << accelerometerY << "Hodometro" << hodometer <<
+						"Rpm" << rpm << "Freio" << breaks;
+
+	if(hasBlock) freeDataJSON << "block" << block;
+
+	dataJSON.appendElements(BSON("DadoLivre" << freeDataJSON.obj()));
 
 	string typeString;
 	switch (type)
@@ -989,7 +998,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 				Dbg(TAG "Position found, sending package with %d lapses of %d bytes", sizePacote / iLapsoSize, iLapsoSize);
 
 				// Save JSON at MongoDB
-				CreatePosition(isOdometerIncreased, isHourmeterIncreased, false, controle->saida5, Bluetec::enumDataType::DADOS);
+				CreatePosition(isOdometerIncreased, isHourmeterIncreased, false, controle->saida5, false, Bluetec::enumDataType::DADOS);
 
 				// Reset entity
 				cPackage.Clear();

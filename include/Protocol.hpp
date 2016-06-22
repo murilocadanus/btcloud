@@ -90,7 +90,7 @@ class Protocol
 		 *
 		 * \return void
 		 */
-		void CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd, bool hasVelocity, Bluetec::enumDataType type);
+		void CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd, bool hasVelocity, bool hasBlock, Bluetec::enumDataType type);
 
 		/** \brief GetLastPosition -.
 		 *
