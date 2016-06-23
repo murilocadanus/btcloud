@@ -36,7 +36,8 @@ enum enumDefaultValues
 	LAPSO = 3,
 	ACELX = 0,
 	ACELY = 0,
-	SPANACEL = 0
+	SPANACEL = 0,
+	REVERSE = 0x00
 };
 
 enum enumHsyncBoardStatus

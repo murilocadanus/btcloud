@@ -672,6 +672,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		hfull.acely = Bluetec::enumDefaultValues::ACELY;
 		hfull.acelx = Bluetec::enumDefaultValues::ACELX;
 		hfull.spanAcel = Bluetec::enumDefaultValues::SPANACEL;
+		hfull.reversao = Bluetec::enumDefaultValues::REVERSE;
 	}
 
 	// TODO: Validate warning
@@ -1014,6 +1015,9 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 					case 0x01: pEventFlag->reverse = (unsigned int) lapso.ed4; break;
 					default: pEventFlag->reverse = false; break;
 				}
+
+				// Case reverse exists, change current status of reverse
+				if(pEventFlag->reverse) pEventFlag->reverse = !pEventFlag->reverse;
 
 				pOdoVel->velocity = lapso.velocidade;
 
