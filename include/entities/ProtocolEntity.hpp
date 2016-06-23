@@ -146,6 +146,7 @@ namespace BTCloud { namespace Entities {
 		uint32_t ignition;
 		uint32_t hasMessage;
 		uint32_t antiTheft;
+		uint32_t reverse;
 	};
 
 	/** \class Position

@@ -39,6 +39,11 @@ enum enumDefaultValues
 	SPANACEL = 0
 };
 
+enum enumHsyncBoardStatus
+{
+	RESTART = 0x60,
+	TURN_OFF = 0xE0
+};
 
 enum enumDataType
 {

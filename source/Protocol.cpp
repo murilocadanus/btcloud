@@ -73,12 +73,12 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	//hfull.constanteRPM;
 	//hfull.confDiversas;
 	//hfull.reservado1[8];
-	hfull.acelx = (unsigned int ) strHfull.at( 33 );
+	hfull.acelx = (unsigned int) strHfull.at(33);
 	//hfull.reservado2[3];
-	hfull.acely = (unsigned int ) strHfull.at( 37 );
+	hfull.acely = (unsigned int) strHfull.at(37);
 	//hfull.tipoAcelerometro;
 	//hfull.limiteAcelFrenTom[3];
-	hfull.spanAcel = (unsigned int ) strHfull.at( 42 );
+	hfull.spanAcel = (unsigned int) strHfull.at(42);
 	//hfull.reservado3[3];
 	//hfull.verConsistenciaSetup;
 	//hfull.confHardwareRe; //Hardware config (Redundancy)
@@ -95,7 +95,7 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	//hfull.reservado6[6];
 	//hfull.gerenciaMemoria1;
 	//hfull.gerenciaMemoria2;
-	//hfull.reversao;
+	hfull.reversao = (unsigned int) strHfull.at(145);
 	//hfull.inicioHorarioVerao[3];
 	//hfull.reservado7[9];
 	//hfull.listaBloqueioOuPermissao[65];
@@ -160,6 +160,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	struct BTCloud::Util::Lapse lapso;
 	Bluetec::HeaderDataFile header;
 	string pLapso;
+	bool hasBlock = false;
 
 	lapso.idTrecho = cFileManager.GetNextIdRoute();
 	lapso.timestamp = 0;
@@ -181,10 +182,18 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	lapso.an4 = 0;
 
 	// Get the current status of bluetec board computer
-	if(hsync.at(0) == '0x60')
-		pEventFlag->block = 0;
-	else if(hsync.at(0) == '0xE0')
-		pEventFlag->block = 1;
+	switch ((unsigned char)hsync.at(0))
+	{
+		case Bluetec::enumHsyncBoardStatus::RESTART: // Equipment restart
+			pEventFlag->block = 0;
+			hasBlock = true;
+		break;
+		case Bluetec::enumHsyncBoardStatus::TURN_OFF: // Equipment shutdown
+			pEventFlag->block = 1;
+			hasBlock = true;
+		break;
+		default: hasBlock = false; break;
+	}
 
 	lapso.timestamp = mktime(BTCloud::Util::ParseTimeDate(hsync.substr(8, 7)));
 
@@ -266,7 +275,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	BTCloud::Util::LapsoToTelemetry(pTelemetry, lapso);
 
 	// Save JSON at MongoDB
-	CreatePosition(false, false, false, false, true, Bluetec::enumDataType::HSYNC);
+	CreatePosition(false, false, false, false, hasBlock, Bluetec::enumDataType::HSYNC);
 
 	// Reset entity
 	cPackage.Clear();
@@ -438,8 +447,8 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	std::string neighborhood = "";
 	std::string city = "";
 	std::string province = "";
-	double lat2 = /*round(*/pPosition->lat /** 1000000000000.0) / 1000000000000.0*/;
-	double long2 = /*round(*/pPosition->lon /** 1000000000000.0) / 1000000000000.0*/;
+	double lat2 = pPosition->lat;
+	double long2 = pPosition->lon;
 	std::string number = "";
 	std::string country = "";
 	std::string velocityStreet = "";
@@ -463,6 +472,7 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	bool ignition = pEventFlag->ignition;
 	bool breaks = pTelemetry->ed8;
 	bool block = pEventFlag->block;
+	bool reverse = pEventFlag->reverse;
 
 	// Create BSON to be persisted
 	mongo::BSONObjBuilder dataJSON;
@@ -497,13 +507,16 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 
 	dataJSON << "inicio_rota" << ignition << "fim_rota" << routeEnd;
 
+	if(hasBlock) dataJSON << "Bloqueio" << block;
+
+	dataJSON << "EmRe" << reverse;
+
 	freeDataJSON << "Analogico1" << analogic1 << "Analogico2" << analogic2 << "Analogico3" << analogic3 <<
 						"Analogico4" << analogic4 << "Horimetro" << horimeter << "AcelerometroX" << accelerometerX <<
 						"Digital1" << digital1 << "Digital2" << digital2 << "Digital3" << digital3 <<
 						"Digital4" << digital4 << "AcelerometroY" << accelerometerY << "Hodometro" << hodometer <<
 						"Rpm" << rpm << "Freio" << breaks;
 
-	if(hasBlock) freeDataJSON << "block" << block;
 
 	dataJSON.appendElements(BSON("DadoLivre" << freeDataJSON.obj()));
 
@@ -808,6 +821,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 	fim = dados.length();
 	bool isHourmeterIncreased = false;
 	bool isOdometerIncreased = false;
+	Bluetec::enumDataType type = Bluetec::enumDataType::HSYNS;
 
 	while(index < fim)
 	{
@@ -992,13 +1006,22 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 				else
 					pEventFlag->ignition = 0;
 
+				switch (hfull.reversao)
+				{
+					case 0x08: pEventFlag->reverse = (unsigned int) lapso.ed1; break;
+					case 0x04: pEventFlag->reverse = (unsigned int) lapso.ed2; break;
+					case 0x02: pEventFlag->reverse = (unsigned int) lapso.ed3; break;
+					case 0x01: pEventFlag->reverse = (unsigned int) lapso.ed4; break;
+					default: pEventFlag->reverse = false; break;
+				}
+
 				pOdoVel->velocity = lapso.velocidade;
 
 				Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
 				Dbg(TAG "Position found, sending package with %d lapses of %d bytes", sizePacote / iLapsoSize, iLapsoSize);
 
 				// Save JSON at MongoDB
-				CreatePosition(isOdometerIncreased, isHourmeterIncreased, false, controle->saida5, false, Bluetec::enumDataType::DADOS);
+				CreatePosition(isOdometerIncreased, isHourmeterIncreased, false, true, false, type);
 
 				// Reset entity
 				cPackage.Clear();
@@ -1007,6 +1030,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 				sizePacote = 0;
 
 				lapso.timestamp += hfull.lapso;
+				type = Bluetec::enumDataType::DADOS;
 			}
 			else
 			{

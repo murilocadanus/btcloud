@@ -245,7 +245,7 @@ bool BlueTecFileManager::GetHfull(uint32_t veioid, HFull& hfull)
 	char buffer[255] = {0};
 	uint32_t sizeBufferFile = 0;
 
-	if(this->files.GetBufferFileVeioId(veioid,NAME_HFULL_FILE, buffer, sizeBufferFile))
+	if(this->files.GetBufferFileVeioId(veioid, NAME_HFULL_FILE, buffer, sizeBufferFile))
 	{
 		memcpy(&hfull, buffer, sizeBufferFile);
 		retorno = true;
