@@ -110,6 +110,9 @@ bool BTCloudApp::Initialize()
 		return false;
 	}
 
+	// Used to retrive unavailable clients
+	this->GetInactiveClientList();
+
 	return true;
 }
 
@@ -134,10 +137,17 @@ void BTCloudApp::onMessage(const cms::Message* message)
 		{
 			if (byteMessage->getBodyLength() > 0)
 			{
-				std::vector<string> c = pConfiguration->GetCollectionClients();
+				std::vector<string> c = vInactiveClients;//pConfiguration->GetCollectionClients();
 
-				// Search for current client at available clientes to proccess collection
+				// Search for current client at unavailable clientes to skip or proccess collection
 				if(messageReceived.GetType() == "BT4" && (c.size() == 0 || std::find(c.begin(), c.end(), messageReceived.GetClient()) != c.end()))
+				{
+					Info(TAG "Not a BT4 message or is a authorized client, name: %s type: %s client: %s plate: %s source: %s date: %i",
+						 messageReceived.GetName().c_str(), messageReceived.GetType().c_str(),
+						messageReceived.GetClient().c_str(), messageReceived.GetPlate().c_str(),
+						 messageReceived.GetSource().c_str(), messageReceived.GetUpdatedAt());
+				}
+				else
 				{
 					mutexQueue.lock();
 
@@ -163,13 +173,6 @@ void BTCloudApp::onMessage(const cms::Message* message)
 					sleep(pConfiguration->GetSleepProcessInterval());
 
 					mutexQueue.unlock();
-				}
-				else
-				{
-					Info(TAG "Not a BT4 message or is a authorized client, name: %s type: %s client: %s plate: %s source: %s date: %i",
-						 messageReceived.GetName().c_str(), messageReceived.GetType().c_str(),
-						messageReceived.GetClient().c_str(), messageReceived.GetPlate().c_str(),
-						 messageReceived.GetSource().c_str(), messageReceived.GetUpdatedAt());
 				}
 			}
 			else
@@ -218,6 +221,42 @@ bool BTCloudApp::Shutdown()
 	activemq::library::ActiveMQCPP::shutdownLibrary();
 
 	return true;
+}
+
+void BTCloudApp::GetInactiveClientList()
+{
+	// Init mysql client
+	pMysqlConnector->Initialize();
+
+	// Connect to mysql
+	pMysqlConnector->Connect(pConfiguration->GetMySQLHost()
+							 , pConfiguration->GetMySQLUser()
+							 , pConfiguration->GetMySQLPassword()
+							 , pConfiguration->GetMySQLScheme());
+	Dbg(TAG "Connected to MySQL");
+
+	string query("SELECT fila_ativa, clinome FROM clientes");
+
+	Dbg(TAG "Query: %s", query.c_str());
+
+	if(pMysqlConnector->Execute(query))
+	{
+		auto mysqlResult = pMysqlConnector->Result();
+		if(mysqlResult)
+		{
+			MYSQL_ROW mysqlRow;
+			while((mysqlRow = pMysqlConnector->FetchRow(mysqlResult)))
+			{
+				// Verify if the client is active to process
+				if(!atoi(mysqlRow[0]))
+					vInactiveClients.push_back(mysqlRow[1]);
+
+				pMysqlConnector->FreeResult(mysqlResult);
+			}
+		}
+	}
+
+	pMysqlConnector->Disconnect();
 }
 
 }
