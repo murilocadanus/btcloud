@@ -71,7 +71,7 @@ class Protocol
 		 * \param arquivo int
 		 * \return void
 		 */
-		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo, bool isFinalRoute);
+		void ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo, bool isFinalRoute, bool isStartRoute);
 
 		/** \brief ParseLapse -.
 		 *
@@ -83,7 +83,7 @@ class Protocol
 
 		 * \return void
 		 */
-		void ParseLapse(Util::Lapse &lapso, string dados, Bluetec::HFull hfull, int index, int fim);
+		void ParseLapse(Util::Lapse &lapso, string dados, Bluetec::HFull hfull, int index, int fim, uint8_t dataType, bool isStartRoute);
 
 	private:
 		/** \brief CreatePosition -.

@@ -182,7 +182,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	lapso.an4 = 0;
 
 	// Get the current status of bluetec board computer
-	switch ((unsigned char)hsync.at(0))
+	switch ((unsigned char)hsync.at(8))
 	{
 		case Bluetec::enumHsyncBoardStatus::RESTART: // Equipment restart
 			pEventFlag->block = 0;
@@ -523,6 +523,9 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	string typeString;
 	switch (type)
 	{
+		case Bluetec::enumDataType::HSYNS:
+			typeString = "HSYNS";
+		break;
 		case Bluetec::enumDataType::HSYNC:
 			typeString = "HSYNC";
 		break;
@@ -631,7 +634,7 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 	pDBClientConnection->update(pConfiguration->GetMongoDBCollections().at(1), query, querySet, false, true);
 }
 
-void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo, bool isFinalRoute)
+void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arquivo, bool isFinalRoute, bool isStartRoute)
 {
 	Bluetec::HeaderDataFile header;
 	Bluetec::HeaderDataFile hsynsHeader;
@@ -694,10 +697,10 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			case Bluetec::enumDataType::HSYNS_DADOS:
 
 			case Bluetec::enumDataType::HSYNS:
-
 				// This route was already started then the first lapse must be restored
 				BTCloud::Util::LapsoSetup(tBuffer, lapso);
 				tipoDado = isFinalRoute ? Bluetec::enumDataType::HSYNS_FINAL : Bluetec::enumDataType::HSYNS_DADOS;
+				//tipoDado = isStartRoute ? Bluetec::enumDataType::HSYNS : tipoDado;
 
 				// Clean the temporary lapse
 				cFileManager.DelFile(dataCache.veioId, header.headerFile);
@@ -785,7 +788,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 			Dbg("%d", isFinalRoute);
 		}
 
-		ParseLapse(lapso, dados, hfull, index, fim);
+		ParseLapse(lapso, dados, hfull, index, fim, tipoDado, isStartRoute);
 
 		if(tipoDado != Bluetec::enumDataType::HSYNS_FINAL)
 		{
@@ -803,7 +806,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	}
 }
 
-void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HFull hfull, int index, int fim)
+void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HFull hfull, int index, int fim, uint8_t dataType, bool isStartRoute)
 {
 	BTCloud::Util::Output *controle;
 	char bufferControle[255];
@@ -822,7 +825,14 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 	fim = dados.length();
 	bool isHourmeterIncreased = false;
 	bool isOdometerIncreased = false;
-	Bluetec::enumDataType type = Bluetec::enumDataType::HSYNS;
+
+	Bluetec::enumDataType type;
+
+	if(dataType == Bluetec::enumDataType::HSYNS || (dataType == Bluetec::enumDataType::HSYNS_FINAL && isStartRoute) || (dataType == Bluetec::enumDataType::HSYNS_DADOS && isStartRoute))
+		type = Bluetec::enumDataType::HSYNS;
+	else
+		type = Bluetec::enumDataType::DADOS;
+
 
 	while(index < fim)
 	{
@@ -1508,6 +1518,8 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 		fimTrecho.push_back((unsigned char ) 0xA5);
 		fimTrecho.push_back((unsigned char ) 0xA7);
 
+		bool isStartRoute = false;
+
 		Dbg(TAG "Searching headers");
 
 		for(size_t i = 0; i < sbt4.length(); i++)
@@ -1523,7 +1535,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 
 						// Parse data
 						Dbg(TAG "ParseData HSYNS until HSYNC %d", ponteiroIni + inicio);
-						ParseData(sbt4.substr(inicio, i - inicio - lHsync), ponteiroIni + inicio, ponteiroIni + i-lHsync - 1, arquivo, false);
+						ParseData(sbt4.substr(inicio, i - inicio - lHsync), ponteiroIni + inicio, ponteiroIni + i-lHsync - 1, arquivo, false, false);
 						inicio = i - lHsync;
 					}
 					if(inicio == i -  lHsync)
@@ -1550,6 +1562,8 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 				}
 				else if(sbt4.compare(i, 5, "HSYNS") == 0)
 				{
+					isStartRoute = true;
+
 					Dbg(TAG "Found the HSYNS in %d", i);
 					if(inicio < i - lHsyns)
 					{
@@ -1557,7 +1571,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 
 						// Parse data
 						Dbg(TAG "ParseData HSYNS %d", ponteiroIni + inicio);
-						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo, false);
+						ParseData(sbt4.substr(inicio, i - inicio - lHsyns), ponteiroIni + inicio, ponteiroIni + i-lHsyns - 1, arquivo, false, isStartRoute);
 						inicio = i - lHsyns;
 					}
 					if(inicio == i -  lHsyns)
@@ -1595,7 +1609,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 						Dbg(TAG "Creating file of type 6 from %d a %d", inicio, lHfull - 1);
 
 						// Parse data
-						ParseData(sbt4.substr(inicio, i - inicio - lHfull), ponteiroIni + inicio, ponteiroIni + i-lHfull - 1, arquivo, false);
+						ParseData(sbt4.substr(inicio, i - inicio - lHfull), ponteiroIni + inicio, ponteiroIni + i-lHfull - 1, arquivo, false, isStartRoute);
 						inicio = i - lHfull;
 					}
 
@@ -1629,7 +1643,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 					Dbg(TAG "Creating file of type 6 from %d a %d", inicio, i - 1);
 
 					// Parse data
-					ParseData(sbt4.substr(inicio, i - inicio), ponteiroIni + inicio, ponteiroIni + i-1, arquivo, true);
+					ParseData(sbt4.substr(inicio, i - inicio), ponteiroIni + inicio, ponteiroIni + i-1, arquivo, true, isStartRoute);
 					inicio = i;
 				}
 				if( inicio == i && i + lFimTrecho <= sbt4.length())
@@ -1651,7 +1665,7 @@ void Protocol::Process(const char *path, int len, mongo::DBClientConnection *dbC
 			Dbg(TAG "Sending type 6 at the end of buffer %d a %d", inicio, sbt4.length() - 1);
 
 			// Parse data
-			ParseData(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo, false);
+			ParseData(sbt4.substr(inicio, sbt4.length()-inicio), ponteiroIni + inicio, ponteiroFim, arquivo, false, isStartRoute);
 		}
 
 		fclose(in);
