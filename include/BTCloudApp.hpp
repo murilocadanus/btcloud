@@ -108,6 +108,7 @@ class BTCloudApp : public IApp, public ExceptionListener, public MessageListener
 		Destination* destination;
 		MessageConsumer* consumer;
 		CountDownLatch latch;
+		int totalMessagesUntilUpdate;
 		std::vector<std::string> vInactiveClients;
 
 		std::queue<std::string> qQueueFiles;

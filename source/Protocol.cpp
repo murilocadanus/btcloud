@@ -614,8 +614,8 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 {
 	mongo::Query query = MONGO_QUERY("veiculo" << vehicleId);
 
-	double lat2 = /*round(*/pPosition->lat /** 1000000000000.0) / 1000000000000.0*/;
-	double long2 = /*round(*/pPosition->lon /** 1000000000000.0) / 1000000000000.0*/;
+	double lat2 = pPosition->lat;
+	double long2 = pPosition->lon;
 
 	// Create update query
 	mongo::BSONObj querySet = BSON("$set" << BSON(

@@ -30,6 +30,7 @@ BTCloudApp::BTCloudApp()
 	, destination(NULL)
 	, consumer(NULL)
 	, latch(1)
+	, totalMessagesUntilUpdate(0)
 {
 }
 
@@ -137,7 +138,7 @@ void BTCloudApp::onMessage(const cms::Message* message)
 		{
 			if (byteMessage->getBodyLength() > 0)
 			{
-				std::vector<string> c = vInactiveClients;//pConfiguration->GetCollectionClients();
+				std::vector<string> c = vInactiveClients;
 
 				// Search for current client at unavailable clientes to skip or proccess collection
 				if(messageReceived.GetType() == "BT4" && (c.size() == 0 || std::find(c.begin(), c.end(), messageReceived.GetClient()) != c.end()))
@@ -169,6 +170,17 @@ void BTCloudApp::onMessage(const cms::Message* message)
 						string filePath = pFileSystem->GetPath() + messageReceived.GetClient() + "/" + messageReceived.GetPlate() + "/" + messageReceived.GetName();
 						qQueueFiles.push(filePath);
 					}
+
+					// Validate to get active clients when total limit is reach
+					if(totalMessagesUntilUpdate == pConfiguration->GetActiveMQTotal())
+					{
+						// Used to retrive unavailable clients
+						this->GetInactiveClientList();
+
+						totalMessagesUntilUpdate = 0;
+					}
+					else
+						totalMessagesUntilUpdate++;
 
 					sleep(pConfiguration->GetSleepProcessInterval());
 
@@ -251,9 +263,9 @@ void BTCloudApp::GetInactiveClientList()
 				if(!atoi(mysqlRow[0]))
 					vInactiveClients.push_back(mysqlRow[1]);
 
-				pMysqlConnector->FreeResult(mysqlResult);
 			}
 		}
+		pMysqlConnector->FreeResult(mysqlResult);
 	}
 
 	pMysqlConnector->Disconnect();
