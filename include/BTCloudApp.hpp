@@ -98,7 +98,7 @@ class BTCloudApp : public IApp, public ExceptionListener, public MessageListener
 
 		virtual bool Update(float dt);
 
-		void GetInactiveClientList();
+		bool GetInactiveClientList();
 
 	private:
 		BlueTecFileManager cFileManager;

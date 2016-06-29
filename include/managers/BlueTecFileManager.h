@@ -37,7 +37,8 @@ enum enumDefaultValues
 	ACELX = 0,
 	ACELY = 0,
 	SPANACEL = 0,
-	REVERSE = 0x00
+	REVERSE = 0x00,
+	HIGH_PRECISION_GPS = 0x22
 };
 
 enum enumHsyncBoardStatus
@@ -123,7 +124,7 @@ struct HFull
 	uint8_t volume;
 	uint16_t parametrosGPS;
 	uint16_t ajusteHoraPorGps;
-	uint16_t parametrosGerais;
+	uint8_t parametrosGerais[2];
 	uint8_t reservado5[7];
 	uint8_t alarmes[58];
 	uint8_t reservado6[6];

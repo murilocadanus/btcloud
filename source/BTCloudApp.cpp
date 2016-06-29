@@ -32,6 +32,8 @@ BTCloudApp::BTCloudApp()
 	, latch(1)
 	, totalMessagesUntilUpdate(0)
 {
+	// Used to retrive unavailable clients
+	this->GetInactiveClientList();
 }
 
 BTCloudApp::~BTCloudApp()
@@ -48,6 +50,9 @@ bool BTCloudApp::Initialize()
 	cFileManager.SetPath(pConfiguration->GetAppListeningPath());
 
 	activemq::library::ActiveMQCPP::initializeLibrary();
+
+	// Used to retrive unavailable clients
+	if(!this->GetInactiveClientList()) return false;
 
 	try
 	{
@@ -110,9 +115,6 @@ bool BTCloudApp::Initialize()
 		Error(TAG "Exception occured: %s", e.getMessage().c_str());
 		return false;
 	}
-
-	// Used to retrive unavailable clients
-	this->GetInactiveClientList();
 
 	return true;
 }
@@ -235,7 +237,7 @@ bool BTCloudApp::Shutdown()
 	return true;
 }
 
-void BTCloudApp::GetInactiveClientList()
+bool BTCloudApp::GetInactiveClientList()
 {
 	// Init mysql client
 	pMysqlConnector->Initialize();
@@ -269,6 +271,8 @@ void BTCloudApp::GetInactiveClientList()
 	}
 
 	pMysqlConnector->Disconnect();
+
+	return true;
 }
 
 }

@@ -1,3 +1,4 @@
+#include <iomanip>
 #include "util/ProtocolUtil.hpp"
 #include "util/Log.hpp"
 
@@ -229,61 +230,85 @@ double ParseHourmeter(string horimetro)
 	return ( ( (double ) ( (unsigned char ) horimetro.at( 0 ) * 65536 ) ) + ( (double ) ( (unsigned char ) horimetro.at( 1 ) * 256 ) ) + (double ) ( (unsigned char ) horimetro.at( 2 ) ) ) / 10;
 }
 
-double ParseLatLong(string operacao)
+double ParseLatLong(uint8_t precision, string operacao)
 {
-	/*
-	 * O CALCULO DE LATLONG E FEITO COMO NO EXEMPLO:
-	 * Se tivermos uma sequencia de operacao 227477 por exemplo, cada byte deve ser covertido para
-	 * decimal separadamento e entao multiplicado pelo sua grandeza em dezena. Por exemplo, 22 para
-	 * deciaml e 34, vezes 65536 (equivalente a 10000 em hexa) e igual a 2228224, somado a 74
-	 * convertido para decimal 116 * 256 (equivalente a 100) = 29696, somado a 77 em decimal 119.
-	 * Dessa soma entao devem ser retirados grau, minuto e segundo da seguinte maneira:
-	 * 	A soma do exemplo e a seguinte 2228224 + 29696 + 119 = 2258039. Entao:
-	 * 	2258039/100000 = 22 graus
-	 * 	2258039 - 2200000 = 58039
-	 * 	58039/1000 = 58 minutos
-	 * 	58039 - 58000 = 039
-	 * 	039 /10 = 3.9 segundos
-	 * Obtidos grau, minuto e segundo, entao a  conversao para o formato decimal de localizacao e feita:
-	 * posicionamento = grau + (minuto/60) + (segundo/3600)
-	*/
+	// Check the precision of gps information to just use or calc the coordinates
+	if((precision >> 5) & 0x01)
+	{
+		/*
+		 * O CALCULO DE LATLONG E FEITO COMO NO EXEMPLO:
+		 * Se tivermos uma sequencia de operacao 227477 por exemplo, cada byte deve ser covertido para
+		 * decimal separadamento e entao multiplicado pelo sua grandeza em dezena. Por exemplo, 22 para
+		 * deciaml e 34, vezes 65536 (equivalente a 10000 em hexa) e igual a 2228224, somado a 74
+		 * convertido para decimal 116 * 256 (equivalente a 100) = 29696, somado a 77 em decimal 119.
+		 * Dessa soma entao devem ser retirados grau, minuto e segundo da seguinte maneira:
+		 * 	A soma do exemplo e a seguinte 2228224 + 29696 + 119 = 2258039. Entao:
+		 * 	2258039/100000 = 22 graus
+		 * 	2258039 - 2200000 = 58039
+		 * 	58039/1000 = 58 minutos
+		 * 	58039 - 58000 = 039
+		 * 	039 /10 = 3.9 segundos
+		 * Obtidos grau, minuto e segundo, entao a  conversao para o formato decimal de localizacao e feita:
+		 * posicionamento = grau + (minuto/60) + (segundo/3600)
+		*/
 
-	double grau, minuto, segundo;
-	unsigned int preConv;
-	string latLong;
-	preConv = ((unsigned int)((unsigned char)operacao.at(0)*65536)) +
-				((unsigned int)((unsigned char)operacao.at(1)*256)) +
-				((unsigned int)((unsigned char)operacao.at(2)));
+		double grau, minuto, segundo;
+		unsigned int preConv;
+		string latLong;
+		preConv = ((unsigned int)((unsigned char)operacao.at(0)*65536)) +
+					((unsigned int)((unsigned char)operacao.at(1)*256)) +
+					((unsigned int)((unsigned char)operacao.at(2)));
 
-	/*Dbg(TAG "%d %d %d %d %d %d %d %d %d %d %d %d ", hex, setw(2), setfill('0'), int((unsigned char)operacao.at(0),
-				hex, setw(2), setfill('0'), int((unsigned char)operacao.at(1)),
-				hex, setw(2), setfill('0'), int((unsigned char)operacao.at(2)));
+		/*Dbg(TAG "%d %d %d %d %d %d %d %d %d %d %d %d ", hex, setw(2), setfill('0'), int((unsigned char)operacao.at(0),
+					hex, setw(2), setfill('0'), int((unsigned char)operacao.at(1)),
+					hex, setw(2), setfill('0'), int((unsigned char)operacao.at(2)));
 
-	Dbg(TAG "Latlong %d", preConv);*/
+		Dbg(TAG "Latlong %d", preConv);*/
 
-	grau = preConv / 100000;
+		grau = preConv / 100000;
 
-	Dbg(TAG "Latlong graus %d", grau);
+		Dbg(TAG "Latlong graus %d", grau);
 
-	preConv -= grau * 100000;
-	minuto = preConv/1000;
+		preConv -= grau * 100000;
+		minuto = preConv/1000;
 
-	Dbg(TAG "Latlong %d", preConv);
-	Dbg(TAG "Latlong minutos %d", minuto);
+		Dbg(TAG "Latlong %d", preConv);
+		Dbg(TAG "Latlong minutos %d", minuto);
 
-	preConv -= minuto * 1000;
-	segundo = ((double)preConv)/10.0;
+		preConv -= minuto * 1000;
+		segundo = ((double)preConv)/10.0;
 
-	Dbg(TAG "Latlong %d", preConv);
-	Dbg(TAG "Latlong segundos %d", segundo);
-	Dbg(TAG "Latlong retorno %d", grau+(minuto/60.0)+(segundo/3600.0));
+		Dbg(TAG "Latlong %d", preConv);
+		Dbg(TAG "Latlong segundos %d", segundo);
+		Dbg(TAG "Latlong retorno %d", grau+(minuto/60.0)+(segundo/3600.0));
 
-	return grau+(minuto/60.0)+(segundo/3600.0);
+		return grau+(minuto/60.0)+(segundo/3600.0);
+	}
+	else
+	{
+		std::ostringstream grauStream;
+		grauStream << std::hex << std::setfill('0');
+		grauStream << std::setw(2) << (int)operacao.at(0);
+
+		std::ostringstream minutoStream;
+		minutoStream << std::hex << std::setfill('0');
+		minutoStream << std::setw(2) << (int)operacao.at(1);
+
+		std::ostringstream segundoStream;
+		segundoStream << std::hex << std::setfill('0');
+		segundoStream << std::setw(2) << (int)operacao.at(2);
+
+		int grau = atoi(grauStream.str().c_str());
+		int minuto = atoi(minutoStream.str().c_str());
+		int segundo = atoi(segundoStream.str().c_str());
+
+		return grau+(minuto/60.0)+(segundo/3600.0);
+	}
 }
 
-double ParseLatitude(string operacao, int yAxis)
+double ParseLatitude(uint8_t precision, string operacao, int yAxis)
 {
-	double latitude = ParseLatLong(operacao);
+	double latitude = ParseLatLong(precision, operacao);
 
 	if(yAxis)
 	{
@@ -292,9 +317,9 @@ double ParseLatitude(string operacao, int yAxis)
 	return latitude;
 }
 
-double ParseLongitude(string operacao, int xAxis, int complemento)
+double ParseLongitude(uint8_t precision, string operacao, int xAxis, int complemento)
 {
-	double longitude = ParseLatLong(operacao);
+	double longitude = ParseLatLong(precision, operacao);
 
 	if(complemento)
 	{
