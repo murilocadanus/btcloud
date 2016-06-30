@@ -171,15 +171,16 @@ namespace BTCloud { namespace Util {
 	 * \param operacao string
 	 * \return double
 	 */
-	double ParseLatLong(string operacao);
+	double ParseLatLong(uint8_t precision, string operacao);
 
 	/** \brief ParseLatitude - .
 	 *
+	 * \param precision uint8_t
 	 * \param operacao string
 	 * \param yAxis int
 	 * \return double
 	 */
-	double ParseLatitude(string operacao, int yAxis);
+	double ParseLatitude(uint8_t precision, string operacao, int yAxis);
 
 	/** \brief ParseLongitude - .
 	 *
@@ -188,7 +189,7 @@ namespace BTCloud { namespace Util {
 	 * \param complemento int
 	 * \return double
 	 */
-	double ParseLongitude(string operacao, int xAxis, int complemento);
+	double ParseLongitude(uint8_t precision, string operacao, int xAxis, int complemento);
 
 	/** \brief CreateFileNameProcessed - .
 	 *

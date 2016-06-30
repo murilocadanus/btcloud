@@ -44,6 +44,7 @@
 #include <cms/MapMessage.h>
 #include <cms/ExceptionListener.h>
 #include <cms/MessageListener.h>
+#include <api/mysql/MySQLConnector.hpp>
 
 using namespace Sascar;
 using namespace Bluetec;
@@ -97,6 +98,8 @@ class BTCloudApp : public IApp, public ExceptionListener, public MessageListener
 
 		virtual bool Update(float dt);
 
+		bool GetInactiveClientList();
+
 	private:
 		BlueTecFileManager cFileManager;
 		DBClientConnection cDBConnection;
@@ -105,6 +108,8 @@ class BTCloudApp : public IApp, public ExceptionListener, public MessageListener
 		Destination* destination;
 		MessageConsumer* consumer;
 		CountDownLatch latch;
+		int totalMessagesUntilUpdate;
+		std::vector<std::string> vInactiveClients;
 
 		std::queue<std::string> qQueueFiles;
 };

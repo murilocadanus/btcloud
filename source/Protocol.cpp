@@ -89,7 +89,8 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	//hfull.volume;
 	//hfull.parametrosGPS;
 	//hfull.ajusteHoraPorGps;
-	//hfull.parametrosGerais;
+	hfull.parametrosGerais[0] = (unsigned int) strHfull.at(70);
+	hfull.parametrosGerais[1] = (unsigned int) strHfull.at(71);
 	//hfull.reservado5[7];
 	//hfull.alarmes[58];
 	//hfull.reservado6[6];
@@ -161,6 +162,13 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	Bluetec::HeaderDataFile header;
 	string pLapso;
 	bool hasBlock = false;
+	Bluetec::HFull hfull;
+
+	if(!cFileManager.GetHfull(dataCache.veioId, hfull))
+	{
+		hfull.parametrosGerais[0] = 0x00;
+		hfull.parametrosGerais[1] = Bluetec::enumDefaultValues::HIGH_PRECISION_GPS;
+	}
 
 	lapso.idTrecho = cFileManager.GetNextIdRoute();
 	lapso.timestamp = 0;
@@ -248,8 +256,8 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	// Create a position for this HSYNC if it has a position
 	bool isGPS = (unsigned char) hsync.at(1) >= 0xA0;
 
-	double lat = isGPS ? BTCloud::Util::ParseLatitude(hsync.substr(2, 3), 1) : 0.0;
-	double lon = isGPS ? BTCloud::Util::ParseLongitude(hsync.substr(5, 3), 1, 0) : 0.0;
+	double lat = isGPS ? BTCloud::Util::ParseLatitude(hfull.parametrosGerais[1], hsync.substr(2, 3), 1) : 0.0;
+	double lon = isGPS ? BTCloud::Util::ParseLongitude(hfull.parametrosGerais[1], hsync.substr(5, 3), 1, 0) : 0.0;
 
 	Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
@@ -614,8 +622,8 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 {
 	mongo::Query query = MONGO_QUERY("veiculo" << vehicleId);
 
-	double lat2 = /*round(*/pPosition->lat /** 1000000000000.0) / 1000000000000.0*/;
-	double long2 = /*round(*/pPosition->lon /** 1000000000000.0) / 1000000000000.0*/;
+	double lat2 = pPosition->lat;
+	double long2 = pPosition->lon;
 
 	// Create update query
 	mongo::BSONObj querySet = BSON("$set" << BSON(
@@ -676,6 +684,8 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		hfull.acelx = Bluetec::enumDefaultValues::ACELX;
 		hfull.spanAcel = Bluetec::enumDefaultValues::SPANACEL;
 		hfull.reversao = Bluetec::enumDefaultValues::REVERSE;
+		hfull.parametrosGerais[0] = 0x00;
+		hfull.parametrosGerais[1] = Bluetec::enumDefaultValues::HIGH_PRECISION_GPS;
 	}
 
 	// TODO: Validate warning
@@ -957,8 +967,8 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 							buffer[0] = controleOper;
 							BTCloud::Util::Output *p;
 							p = (BTCloud::Util::Output*) buffer;
-							double lat = BTCloud::Util::ParseLatitude(operacao.substr(1, 3), p->saida2);
-							double lon = BTCloud::Util::ParseLongitude(operacao.substr(4, 3), p->saida1, p->saida0);
+							double lat = BTCloud::Util::ParseLatitude(hfull.parametrosGerais[1], operacao.substr(1, 3), p->saida2);
+							double lon = BTCloud::Util::ParseLongitude(hfull.parametrosGerais[1], operacao.substr(4, 3), p->saida1, p->saida0);
 
 							Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
@@ -1026,9 +1036,6 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 					default: pEventFlag->reverse = false; break;
 				}
 
-				// Case reverse exists, change current status of reverse
-				if(pEventFlag->reverse) pEventFlag->reverse = !pEventFlag->reverse;
-
 				pOdoVel->velocity = lapso.velocidade;
 
 				Dbg(TAG "Timestamp before transmition %d", lapso.timestamp);
@@ -1045,6 +1052,9 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 
 				lapso.timestamp += hfull.lapso;
 				type = Bluetec::enumDataType::DADOS;
+
+				// Case reverse exists, change current status of reverse
+				if(pEventFlag->reverse) pEventFlag->reverse = !pEventFlag->reverse;
 			}
 			else
 			{
