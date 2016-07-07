@@ -38,7 +38,7 @@ enum enumDefaultValues
 	ACELY = 0,
 	SPANACEL = 0,
 	REVERSE = 0x00,
-	HIGH_PRECISION_GPS = 0x22
+	HIGH_PRECISION_GPS = 0x08
 };
 
 enum enumHsyncBoardStatus

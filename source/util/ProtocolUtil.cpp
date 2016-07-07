@@ -233,7 +233,7 @@ double ParseHourmeter(string horimetro)
 double ParseLatLong(uint8_t precision, string operacao)
 {
 	// Check the precision of gps information to just use or calc the coordinates
-	if((precision >> 5) & 0x01)
+	if((precision >> 3) & 0x01)
 	{
 		/*
 		 * O CALCULO DE LATLONG E FEITO COMO NO EXEMPLO:

@@ -66,7 +66,7 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	//hfull.idVeiculo = strHfull.substr(1, 8);
 	//hfull.versaoFirmware = strHfull.substr(9, 2);
 	//hfull.versaoHardware = (unsigned int)strHfull.at(12);
-	//hfull.configHardware = (unsigned int)strHfull.at();
+	hfull.configHardware = (unsigned int)strHfull.at(12);
 	//hfull.reservado[5];
 	//hfull.constanteVelocidade2;
 	//hfull.constanteVelocidade1;
@@ -89,8 +89,8 @@ void Protocol::ParseHFULL(string strHfull, unsigned int ponteiroIni, unsigned in
 	//hfull.volume;
 	//hfull.parametrosGPS;
 	//hfull.ajusteHoraPorGps;
-	hfull.parametrosGerais[0] = (unsigned int) strHfull.at(70);
-	hfull.parametrosGerais[1] = (unsigned int) strHfull.at(71);
+	//hfull.parametrosGerais[0] = (unsigned int) strHfull.at(70);
+	//hfull.parametrosGerais[1] = (unsigned int) strHfull.at(71);
 	//hfull.reservado5[7];
 	//hfull.alarmes[58];
 	//hfull.reservado6[6];
@@ -166,8 +166,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 
 	if(!cFileManager.GetHfull(dataCache.veioId, hfull))
 	{
-		hfull.parametrosGerais[0] = 0x00;
-		hfull.parametrosGerais[1] = Bluetec::enumDefaultValues::HIGH_PRECISION_GPS;
+		hfull.configHardware = Bluetec::enumDefaultValues::HIGH_PRECISION_GPS;
 	}
 
 	lapso.idTrecho = cFileManager.GetNextIdRoute();
@@ -256,8 +255,8 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	// Create a position for this HSYNC if it has a position
 	bool isGPS = (unsigned char) hsync.at(1) >= 0xA0;
 
-	double lat = isGPS ? BTCloud::Util::ParseLatitude(hfull.parametrosGerais[1], hsync.substr(2, 3), 1) : 0.0;
-	double lon = isGPS ? BTCloud::Util::ParseLongitude(hfull.parametrosGerais[1], hsync.substr(5, 3), 1, 0) : 0.0;
+	double lat = isGPS ? BTCloud::Util::ParseLatitude(hfull.configHardware, hsync.substr(2, 3), 1) : 0.0;
+	double lon = isGPS ? BTCloud::Util::ParseLongitude(hfull.configHardware, hsync.substr(5, 3), 1, 0) : 0.0;
 
 	Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
@@ -684,8 +683,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		hfull.acelx = Bluetec::enumDefaultValues::ACELX;
 		hfull.spanAcel = Bluetec::enumDefaultValues::SPANACEL;
 		hfull.reversao = Bluetec::enumDefaultValues::REVERSE;
-		hfull.parametrosGerais[0] = 0x00;
-		hfull.parametrosGerais[1] = Bluetec::enumDefaultValues::HIGH_PRECISION_GPS;
+		hfull.configHardware = Bluetec::enumDefaultValues::HIGH_PRECISION_GPS;
 	}
 
 	// TODO: Validate warning
@@ -967,8 +965,8 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 							buffer[0] = controleOper;
 							BTCloud::Util::Output *p;
 							p = (BTCloud::Util::Output*) buffer;
-							double lat = BTCloud::Util::ParseLatitude(hfull.parametrosGerais[1], operacao.substr(1, 3), p->saida2);
-							double lon = BTCloud::Util::ParseLongitude(hfull.parametrosGerais[1], operacao.substr(4, 3), p->saida1, p->saida0);
+							double lat = BTCloud::Util::ParseLatitude(hfull.configHardware, operacao.substr(1, 3), p->saida2);
+							double lon = BTCloud::Util::ParseLongitude(hfull.configHardware, operacao.substr(4, 3), p->saida1, p->saida0);
 
 							Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
