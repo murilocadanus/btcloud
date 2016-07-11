@@ -253,7 +253,7 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	Dbg(TAG "Save buffer file Enum data type %d", Bluetec::enumDataType::HSYNC);
 
 	// Create a position for this HSYNC if it has a position
-	bool isGPS = (unsigned char) hsync.at(1) >= 0xA0;
+	bool isGPS = (unsigned char) hsync.at(1) >= 0xA0 && !((hsync.at(1) >> 3) & 0x01);
 
 	double lat = isGPS ? BTCloud::Util::ParseLatitude(hfull.configHardware, hsync.substr(2, 3), 1) : 0.0;
 	double lon = isGPS ? BTCloud::Util::ParseLongitude(hfull.configHardware, hsync.substr(5, 3), 1, 0) : 0.0;
@@ -956,8 +956,8 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 						unsigned char controleOper = operacao.at(0);
 						index += 7;
 
-						// Verify if is a GPS
-						if(controleOper >= 0xA0)
+						// Verify if is a GPS and is a fixed GPS
+						if(controleOper >= 0xA0 && !((controleOper >> 3) & 0x01))
 						{
 							Dbg(TAG "GPS");
 
