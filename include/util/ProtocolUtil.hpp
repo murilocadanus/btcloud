@@ -70,6 +70,7 @@ namespace BTCloud { namespace Util {
 			int idTrecho;
 			std::string operacao;
 			std::string ibtMotorista;
+			std::string lastIncompleteLapse;
 	} Lapse;
 
 	/** \brief LapsoSetup - .
