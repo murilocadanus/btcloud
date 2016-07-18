@@ -676,6 +676,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	struct BTCloud::Util::Lapse lapso;
 	int tipoDado = Bluetec::enumDataType::DADOS;
 	int index = 0;
+	int fim = 0;
 	bool hasLapses = false;
 
 	lapso.idTrecho = 0;
@@ -846,7 +847,8 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 
 	int maxSizePacote = 1500;
 	int sizePacote = 0;
-	int fim = dados.length() - 1;
+	//int fim = dados.length() - 1;
+	int fim = dados.length();
 
 	// When a route is known, so it exists and it can be processed
 	Dbg(TAG "Known route, processing...");
