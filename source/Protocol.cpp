@@ -581,26 +581,22 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 		// Insert json data at posicao
 		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataJSONObj);
 
-		// Verify if has a valid position
-		if(abs(long2) != 0 && abs(lat2) != 0)
-		{
-			// Get last position
-			uint64_t lastPositionDate = GetLastPosition(vehicle, datePosition);
+		// Get last position
+		uint64_t lastPositionDate = GetLastPosition(vehicle, datePosition);
 
-			// Insert/Update data at ultima_posicao
-			if(lastPositionDate == 0)
-			{
-				Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
-				pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataJSONObj);
-			}
-			else if(lastPositionDate < datePosition)
-			{
-				Dbg(TAG "Updating position at mongodb collection ultima_posicao");
-				UpdateLastPosition(vehicle, datePosition, dateArrival);
-			}
-			else
-				Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
+		// Insert/Update data at ultima_posicao
+		if(lastPositionDate == 0)
+		{
+			Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
+			pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataJSONObj);
 		}
+		else if(lastPositionDate < datePosition)
+		{
+			Dbg(TAG "Updating position at mongodb collection ultima_posicao");
+			UpdateLastPosition(vehicle, datePosition, dateArrival);
+		}
+		else
+			Dbg(TAG "Skipping position at mongodb collection ultima_posicao");
 	}
 	catch (mongo::DBException &e)
 	{
@@ -648,17 +644,32 @@ void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64
 
 	double lat2 = pPosition->lat;
 	double long2 = pPosition->lon;
+	mongo::BSONObj querySet;
 
-	// Create update query
-	mongo::BSONObj querySet = BSON("$set" << BSON(
-										"data_posicao" << mongo::Date_t(datePosition) <<
-										"data_chegada" << mongo::Date_t(dateArrival) <<
-										"motorista_ibutton" << pPosition->inf_motorista.id <<
-										"velocidade" << pTelemetry->velocity <<
-										"coordenadas" << BSON("Type" << "Point" <<
-															"coordinates" << BSON_ARRAY(long2 << lat2))
-										)
-							);
+	// Verify if has a valid position
+	if(abs(long2) != 0 && abs(lat2) != 0)
+	{
+		// Create update query
+		querySet = BSON("$set" << BSON(
+									"data_posicao" << mongo::Date_t(datePosition) <<
+									"data_chegada" << mongo::Date_t(dateArrival) <<
+									"motorista_ibutton" << pPosition->inf_motorista.id <<
+									"velocidade" << pTelemetry->velocity <<
+									"coordenadas" << BSON("Type" << "Point" << "coordinates" << BSON_ARRAY(long2 << lat2))
+									)
+					);
+	}
+	else
+	{
+		// Create update query
+		querySet = BSON("$set" << BSON(
+									"data_posicao" << mongo::Date_t(datePosition) <<
+									"data_chegada" << mongo::Date_t(dateArrival) <<
+									"motorista_ibutton" << pPosition->inf_motorista.id <<
+									"velocidade" << pTelemetry->velocity
+								)
+					);
+	}
 
 	Dbg(TAG "Update querySet %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), querySet.toString().c_str());
 
