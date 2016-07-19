@@ -697,6 +697,7 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 	lapso.an2 = 0;
 	lapso.an3 = 0;
 	lapso.an4 = 0;
+	lapso.lastIncompleteLapse = "";
 
 	Dbg(TAG "Processing data %d %d...", ponteiroIni, ponteiroFim);
 	Dbg(TAG "%d %d %d %d a %d %d %d %d", hex, setw(2), setfill('0'), int((unsigned char)dados.at(0)), hex, setw(2), setfill('0'), int((unsigned char)dados.at(dados.length()-1)));
@@ -816,6 +817,14 @@ void Protocol::ParseData(string dados, int ponteiroIni, int ponteiroFim, int arq
 		header.dataType = hsynsHeader.dataType;
 		header.timestamp = hsynsHeader.timestamp;
 
+		// Persist last incomplete lapse
+		if(lapso.lastIncompleteLapse.length() > 0)
+		{
+			//ParseLapse(lapso, dados, hfull, index, tipoDado, isStartRoute);
+			Dbg(TAG "Process missing lapse %s", lapso.lastIncompleteLapse.c_str());
+			dados = lapso.lastIncompleteLapse + dados;
+		}
+
 		ParseLapse(lapso, dados, hfull, index, tipoDado, isStartRoute);
 
 		if(tipoDado != Bluetec::enumDataType::HSYNS_FINAL)
@@ -847,8 +856,7 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 
 	int maxSizePacote = 1500;
 	int sizePacote = 0;
-	//int fim = dados.length() - 1;
-	int fim = dados.length();
+	int fim = dados.length() - 1;
 
 	// When a route is known, so it exists and it can be processed
 	Dbg(TAG "Known route, processing...");
@@ -1091,6 +1099,8 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 
 				// Case reverse exists, change current status of reverse
 				if(pEventFlag->reverse) pEventFlag->reverse = !pEventFlag->reverse;
+
+				lapso.lastIncompleteLapse = "";
 			}
 			else
 			{
