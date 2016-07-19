@@ -81,6 +81,10 @@ void LapsoSetup(string lapso, struct Lapse& setup)
 	Dbg(TAG "Index: %d Horimetro: %f", index, setup.horimetro);
 
 	index = lapso.find("##", index) + 2;
+	setup.lastIncompleteLapse = lapso.substr(index, lapso.find("##", index) - index);
+	Dbg(TAG "Incomplete lapse: %d Horimetro: %s", index, setup.lastIncompleteLapse.c_str());
+
+	index = lapso.find("##", index) + 2;
 	setup.ibtMotorista = lapso.substr(index, lapso.find("##", index) - 1);
 
 	// Force to keep maxium size
@@ -126,7 +130,8 @@ string PersistableLapse(Lapse *l)
 
 	std::stringstream ss;
 
-	ss << l->velocidade << "##" << l->rpm << "##" << l->acelx << "##" << l->acely << "##" << l->ed1 << l->ed2 << l->ed3 << l->ed4 << l->ed5 << l->ed6 << l->ed7 << l->ed8 << "##" << l->an1 << "##" << l->an2 << "##" << l->an3 << "##" << l->an4 << "##" << l->odometro << "##" << l->horimetro << "##" << l->ibtMotorista;
+	ss << l->velocidade << "##" << l->rpm << "##" << l->acelx << "##" << l->acely << "##" << l->ed1 << l->ed2 << l->ed3 << l->ed4 << l->ed5 << l->ed6 << l->ed7 << l->ed8 << "##" << l->an1 << "##" << l->an2 << "##" << l->an3 << "##" << l->an4 << "##" << l->odometro << "##" << l->horimetro << "##" << l->lastIncompleteLapse << "##" << l->ibtMotorista;
+	//ss << l->velocidade << "##" << l->rpm << "##" << l->acelx << "##" << l->acely << "##" << l->ed1 << l->ed2 << l->ed3 << l->ed4 << l->ed5 << l->ed6 << l->ed7 << l->ed8 << "##" << l->an1 << "##" << l->an2 << "##" << l->an3 << "##" << l->an4 << "##" << l->odometro << "##" << l->horimetro << "##" << l->ibtMotorista;
 
 	Dbg(TAG "PersistableLapse: %s", ss.str().c_str());
 	return ss.str();

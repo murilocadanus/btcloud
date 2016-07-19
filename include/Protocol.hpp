@@ -26,6 +26,7 @@
 #include "entities/ProtocolEntity.hpp"
 #include "managers/BlueTecFileManager.h"
 #include "util/ProtocolUtil.hpp"
+#include <vector>
 
 using namespace std;
 
@@ -83,14 +84,14 @@ class Protocol
 
 		 * \return void
 		 */
-		void ParseLapse(Util::Lapse &lapso, string dados, Bluetec::HFull hfull, int index, int fim, uint8_t dataType, bool isStartRoute);
+		void ParseLapse(Util::Lapse &lapso, string dados, Bluetec::HFull hfull, int index, uint8_t dataType, bool isStartRoute);
 
 	private:
 		/** \brief CreatePosition -.
 		 *
 		 * \return void
 		 */
-		void CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd, bool hasVelocity, bool hasBlock, Bluetec::enumDataType type);
+		void CreatePosition(bool isOdometerIncreased, bool isHourmeterIncreased, bool routeEnd, bool hasVelocity, bool hasBlock, Bluetec::enumDataType type, std::vector<unsigned char> rawLapse);
 
 		/** \brief GetLastPosition -.
 		 *
