@@ -200,6 +200,16 @@ namespace BTCloud { namespace Util {
 	 */
 	void CreateFileNameProcessed(string *newPath, vector<string> tokens);
 
+	/** \brief HaverSine - .
+	 *
+	 * \param lat1 double
+	 * \param lon1 double
+	 * \param lat2 double
+	 * \param lon2 double
+	 * \return double
+	 */
+	double HaverSine(double lat1, double lon1, double lat2, double lon2);
+
 }} // namespace
 
 #endif // PARSER_HPP

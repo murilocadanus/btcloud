@@ -1,6 +1,7 @@
 #include <iomanip>
 #include "util/ProtocolUtil.hpp"
 #include "util/Log.hpp"
+#include <math.h>
 
 #define TAG "[ProtocolUtil] "
 
@@ -350,6 +351,25 @@ void CreateFileNameProcessed(string *newPath, std::vector<std::string> tokens)
 	}
 
 	Info(TAG "Renamed processed file: %s", newPath->c_str());
+}
+
+double HaverSine(double lat1, double lon1, double lat2, double lon2)
+{
+	const double halfC = M_PI / 180;
+
+	uint64_t r = 6371e3; // metres
+	double teta1 = lat1 * halfC;
+	double teta2 = lat2 * halfC;
+	double deltaTeta = (lat2-lat1) * halfC;
+	double deltaLambda = (lon2-lon1) * halfC;
+
+	double a = sin(deltaTeta/2) * sin(deltaTeta/2) +
+			cos(teta1) * cos(teta2) *
+			sin(deltaLambda/2) * sin(deltaLambda/2);
+	double c = 2 * atan2(sqrt(a), sqrt(1-a));
+
+	double d = r * c;
+	return d;
 }
 
 }} // namespace
