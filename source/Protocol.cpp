@@ -261,8 +261,11 @@ void Protocol::ParseHSYNC(string hsync, unsigned int arquivo, unsigned int ponte
 	Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
 	// Setting data to position package
-	pPosition->lat = lat;
-	pPosition->lon = lon;
+	if(lat < 0.0)
+		pPosition->lat = lat;
+
+	if(lon < 0.0)
+		pPosition->lon = lon;
 
 	pPosition->dateTime = lapso.timestamp;
 	pPosition->dateArrive = pTimer->GetCurrentTime();
@@ -1028,8 +1031,11 @@ void Protocol::ParseLapse(BTCloud::Util::Lapse &lapso, string dados, Bluetec::HF
 							Dbg(TAG "Lat Long -> %20.18f %20.18f", lat, lon);
 
 							// Setting data to position package
-							pPosition->lat = lat;
-							pPosition->lon = lon;
+							if(lat < 0.0)
+								pPosition->lat = lat;
+
+							if(lon < 0.0)
+								pPosition->lon = lon;
 						}
 					}
 
