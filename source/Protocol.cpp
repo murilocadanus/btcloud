@@ -578,19 +578,36 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 
 	try
 	{
+		Position pos;
+
+		// Get last position
+		GetLastPosition(vehicle, datePosition, &pos);
+
+		double distance = BTCloud::Util::HaverSine(pos.lat, pos.lon, pPosition->lat, pPosition->lon);
+		uint64_t timeInterval = pPosition->dateTime - pos.dateTime;
+
+		if(distance > 0 && timeInterval > 0)
+		{
+			// Convert distance to meters and time to seconds
+			double velocity = (distance * 1000) / timeInterval;
+
+			// Verify if the velocity is ok with distance driven
+			if(velocity > 200)
+				dataJSONObj = dataJSONObj.removeField("coordenates");
+		}
+		else
+			dataJSONObj = dataJSONObj.removeField("coordenates");
+
 		// Insert json data at posicao
 		pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(0), dataJSONObj);
 
-		// Get last position
-		uint64_t lastPositionDate = GetLastPosition(vehicle, datePosition);
-
 		// Insert/Update data at ultima_posicao
-		if(lastPositionDate == 0)
+		if(pos.dateTime == 0)
 		{
 			Dbg(TAG "Inserting position at mongodb collection ultima_posicao");
 			pDBClientConnection->insert(pConfiguration->GetMongoDBCollections().at(1), dataJSONObj);
 		}
-		else if(lastPositionDate < datePosition)
+		else if(pos.dateTime < datePosition)
 		{
 			Dbg(TAG "Updating position at mongodb collection ultima_posicao");
 			UpdateLastPosition(vehicle, datePosition, dateArrival);
@@ -610,32 +627,42 @@ void Protocol::CreatePosition(bool isOdometerIncreased, bool isHourmeterIncrease
 	}
 }
 
-uint64_t Protocol::GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate)
+void Protocol::GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate, Position *pos)
 {
 	// Use a cached var to evade query execute
 	if(iLastPositionDate == lastPositionDate && iLastPositionVehicle == vehicleId)
-		return iLastPositionDate;
-
-	mongo::Query query = MONGO_QUERY("veiculo" << vehicleId);
-
-	Dbg(TAG "Has last position %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), query.toString().c_str());
-
-	auto_ptr<mongo::DBClientCursor> cursor = pDBClientConnection->query(pConfiguration->GetMongoDBCollections().at(1), query);
-
-	// Verify if it has a register at collection
-	if(cursor->more() > 0)
-	{
-		mongo::BSONObj query_res = cursor->next();
-		mongo::Date_t positionDate = query_res.getField("data_posicao").date();
-
-		// Set a cache value to not execute the query all the time
-		iLastPositionDate = positionDate.millis;
-		iLastPositionVehicle = vehicleId;
-
-		return positionDate.millis;
-	}
+		pos->dateTime = iLastPositionDate;
 	else
-		return 0;
+	{
+		mongo::Query query = MONGO_QUERY("veiculo" << vehicleId);
+
+		Dbg(TAG "Has last position %s: %s", pConfiguration->GetMongoDBCollections().at(1).c_str(), query.toString().c_str());
+
+		auto_ptr<mongo::DBClientCursor> cursor = pDBClientConnection->query(pConfiguration->GetMongoDBCollections().at(1), query);
+
+		// Verify if it has a register at collection
+		if(cursor->more() > 0)
+		{
+			mongo::BSONObj query_res = cursor->next();
+			mongo::Date_t positionDate = query_res.getField("data_posicao").date();
+			double positionLon = query_res.getFieldDotted("coordenadas.coordinates[0]").number();
+			double positionLat = query_res.getFieldDotted("coordenadas.coordinates[1]").number();
+
+			// Set a cache value to not execute the query all the time
+			iLastPositionDate = positionDate.millis;
+			iLastPositionVehicle = vehicleId;
+
+			pos->dateTime = positionDate.millis;
+			pos->lat = positionLat;
+			pos->lon = positionLon;
+		}
+		else
+		{
+			pos->dateTime = iLastPositionDate;
+			pos->lat = 0.0;
+			pos->lon = 0.0;
+		}
+	}
 }
 
 void Protocol::UpdateLastPosition(int vehicleId, u_int64_t datePosition, u_int64_t dateArrival)
