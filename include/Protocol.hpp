@@ -99,7 +99,7 @@ class Protocol
 		 * \param lastPositionDate uint64_t
 		 * \return void
 		 */
-		uint64_t GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate);
+		void GetLastPosition(uint32_t vehicleId, uint64_t lastPositionDate, Position *pos);
 
 		/** \brief UpdateLastPosition -.
 		 *
